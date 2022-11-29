@@ -3,6 +3,7 @@
 import json
 import time
 import sys
+import os
 import requests
 import urllib3
 
@@ -51,8 +52,8 @@ def login():
     url = f"https://{ND_SERVER}/login"
 
     payload = json.dumps({
-        "userName": USER,
-        "userPasswd": PASSWORD,
+        "userName": os.environ['USER'],
+        "userPasswd": os.environ['PASSWORD'],
         "domain": "local"
     })
     headers = {'Content-Type': 'application/json'}
@@ -335,9 +336,11 @@ def deploy_network(token):
 
 def main():
     """ A doc string. """
+
+      
     tok = login()
     time.sleep(4)
-
+    '''
     create_vrf(tok)
     time.sleep(8)
 
@@ -357,7 +360,7 @@ def main():
     deploy_network(tok)
     time.sleep(15)
     # Need longer wait time after deploy (10sec)
-
+    '''
 
 if __name__ == '__main__':
     main()
