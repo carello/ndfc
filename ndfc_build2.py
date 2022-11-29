@@ -13,8 +13,8 @@ urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
 # Enter credentials and server IP
 ND_SERVER = "10.91.86.229"
-USER = "admin"
-PASSWORD = "enter your password here"
+USER = os.environ['USER']
+PASSWORD = os.environ['PASSWORD']
 
 #########################
 # L3 VRF Variable
@@ -52,8 +52,8 @@ def login():
     url = f"https://{ND_SERVER}/login"
 
     payload = json.dumps({
-        "userName": os.environ['USER'],
-        "userPasswd": os.environ['PASSWORD'],
+        "userName": USER,
+        "userPasswd": PASSWORD,
         "domain": "local"
     })
     headers = {'Content-Type': 'application/json'}
