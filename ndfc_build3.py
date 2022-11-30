@@ -44,8 +44,8 @@ L2_NETWORK_NAME = "cpNetwork_30222"
 SWITCH1_SWITCHPORTS = "Ethernet1/26"
 SWITCH2_SWITCHPORTS = "Ethernet1/26"
 
-# SWITCH1 = "FDO210518NL"
-# SWITCH2 = "FDO20352B5P"
+#SWITCH1 = "FDO210518NL"
+#SWITCH2 = "FDO20352B5P"
 leaf_switch_dict = {
     "leaf1": "FDO210518NL",
     "leaf2": "FDO20352B5P"
@@ -153,8 +153,16 @@ def create_vrf(token):
 
 
 # Experimenting with iteration over switch dict
-def get_switch_serial():
+def get_switch_serial(token):
     """ Creating iteration of switch dictionary """
+
+    print("\nAttaching VRF...")
+    url = f"https://{ND_SERVER}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs/attachments"
+
+    headers = {
+        'Authorization': str(token),
+        'Content-Type': 'application/json'
+    }
 
     lan_attach_list = []
 
@@ -173,17 +181,28 @@ def get_switch_serial():
         # print("\n", attachment_template)
         lan_attach_list.append(attachment_template)
 
-    attachlist_build = [
-        {
+    #print("\nPrinting lan attach list")
+    #print(lan_attach_list)
+
+    attachlist_build = [{
             "vrfName": VRF_NAME,
-            "lanAttachList": [lan_attach_list]
-        }
-        ]
+            "lanAttachList": lan_attach_list
+            }]
+        
+    #print("\nAttach list build")
+    #print(attachlist_build)
 
     new_payload = json.dumps(attachlist_build)
-    print("\n", "printing composite build 'NEW PAYLOAD' of list")
-    print(type(new_payload))
-    print("\n", new_payload)
+    
+    #print("\n", "printing composite build 'NEW PAYLOAD' with json.dumps list")
+    #print(type(new_payload))
+    #print(new_payload)
+
+    response = requests.request(
+        "POST", url, headers=headers, data=new_payload, verify=False, timeout=3)
+
+    print(response.text)
+    #status_check(response)
 
 
 # Consolidate this with get_switch_serial function...
@@ -226,11 +245,13 @@ def attach_vrf(token):
     }
     ])
 
-    response = requests.request(
-        "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    print(payload)
 
-    print(response.text)
-    status_check(response)
+    #response = requests.request(
+    #    "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+
+    #print(response.text)
+    #status_check(response)
 
 
 def deploy_vrf(token):
@@ -394,22 +415,23 @@ def main():
     """ Main section to run functions. """
 
     tok = login()
- #   time.sleep(4)
+    time.sleep(4)
 
-    get_switch_serial()
+#    create_vrf(tok)
+#    time.sleep(8)
 
+#    get_switch_serial(tok)
+#    time.sleep(10)
 
-    '''
-    create_vrf(tok)
-    time.sleep(8)
+# This was orignail, delete once get_switch_serial is working
+##    attach_vrf(tok)
+##    time.sleep(10)
 
-    attach_vrf(tok)
-    time.sleep(10)
-
-    deploy_vrf(tok)
-    time.sleep(15)
+#    deploy_vrf(tok)
+#    time.sleep(15)
     # Need longer wait time after deploy (10sec)
 
+    ''''
     create_network(tok)
     time.sleep(8)
 
