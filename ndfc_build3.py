@@ -25,13 +25,20 @@ VRF_SEGMENT_ID = "50222"
 VRF_NAME = "cpVRF-50222"
 VRF_VLAN_ID = "2222"
 VXLAN_FABRIC = "Demo1"
-VRF_VLAN = "2222"
+
+# I think this is redundant and could be deleted
+#VRF_VLAN = "2222"
+
 ASN = "65111"
 
 ##########################
 # L2 VNI Variables, a better naming convention and organization is needed
 SWITCH1 = "FDO210518NL"
 SWITCH2 = "FDO20352B5P"
+switch_dict = {
+    "leaf1": "FDO210518NL",
+    "leaf2": "FDO20352B5P"
+    }
 
 GATEWAY_IPADDRESS = "172.222.222.1/24"
 L2_VLAN_ID = "2322"
@@ -64,7 +71,7 @@ def login():
         "POST", url, headers=headers, data=payload, verify=False, timeout=3)
     data = json.loads(response.text)['token']
 
-    print(data)
+    #print(data)
     return data
 
 
@@ -136,6 +143,43 @@ def create_vrf(token):
 
     print(response.text)
     status_check(response)
+
+
+# Experimenting with iteration over switch dict
+def get_switch_serial():
+    """ Creating iteration of switch dictionary """
+
+    lan_attach_list = []
+
+    for switch, serial in switch_dict.items():
+        print(switch, serial)
+        attachment_template = {
+            "fabric": VXLAN_FABRIC,
+            "vrfName": VRF_NAME,
+            "serialNumber": serial,
+            "vlan": VRF_VLAN_ID,
+            "freeformConfig": "",
+            "deployment": True,
+            "extensionValues": "",
+            "instanceValues": "{\"loopbackId\":\"\",\"loopbackIpAddress\":\"\",\"loopbackIpV6Address\":\"\"}"
+        }
+        #print("\n", attachment_template)
+        lan_attach_list.append(attachment_template)
+
+
+    attachlist_build = [
+        {
+            "vrfName": VRF_NAME,
+            "lanAttachList": [lan_attach_list]
+        }
+        ]
+
+
+    new_payload = json.dumps(attachlist_build)
+    print("\n", "printing composite build 'NEW PAYLOAD' of list")
+    print(type(new_payload))
+    print("\n", new_payload)
+
 
 
 def attach_vrf(token):
@@ -339,9 +383,13 @@ def deploy_network(token):
 def main():
     """ A doc string. """
 
-      
+
     tok = login()
-    time.sleep(4)
+ #   time.sleep(4)
+
+    get_switch_serial()
+
+
     '''
     create_vrf(tok)
     time.sleep(8)
