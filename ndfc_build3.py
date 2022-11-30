@@ -1,6 +1,7 @@
 """ A module docstring placeholder """
 
 # working on loops for switch attachments
+# to view doc stings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
 
 import json
 import time
@@ -19,7 +20,7 @@ USER = os.environ['USER']
 PASSWORD = os.environ['PASSWORD']
 
 #########################
-# L3 VRF Variable
+# L3 VRF Variables
 VRF_VLAN_NAME = "VRF-522"
 VRF_SEGMENT_ID = "50222"
 VRF_NAME = "cpVRF-50222"
@@ -32,31 +33,36 @@ VXLAN_FABRIC = "Demo1"
 ASN = "65111"
 
 ##########################
-# L2 VNI Variables, a better naming convention and organization is needed
-SWITCH1 = "FDO210518NL"
-SWITCH2 = "FDO20352B5P"
-switch_dict = {
-    "leaf1": "FDO210518NL",
-    "leaf2": "FDO20352B5P"
-    }
-
+# L2 VNI Variables
 GATEWAY_IPADDRESS = "172.222.222.1/24"
 L2_VLAN_ID = "2322"
 L2_SEGMENT_ID = "30222"
 L2_NETWORK_NAME = "cpNetwork_30222"
+
+# These needs to be a list
+# maybe FDO210518NL_SWITCHPORTS = ["Ethernetx/y", "Ethernetx/y"]
 SWITCH1_SWITCHPORTS = "Ethernet1/26"
 SWITCH2_SWITCHPORTS = "Ethernet1/26"
 
+# SWITCH1 = "FDO210518NL"
+# SWITCH2 = "FDO20352B5P"
+leaf_switch_dict = {
+    "leaf1": "FDO210518NL",
+    "leaf2": "FDO20352B5P"
+    }
+
 
 def status_check(resp):
-    """ A doc string. """
+    """ Check request status return code. """
+
     if resp.status_code != 200:
         print("Error...")
         sys.exit()
 
 
 def login():
-    """ A doc string. """
+    """ Login into ND and return a token. """
+
     print("Logging into Nexus Dashboard...")
     url = f"https://{ND_SERVER}/login"
 
@@ -76,7 +82,8 @@ def login():
 
 
 def create_vrf(token):
-    """ A doc string. """
+    """ Create a new VRF. """
+
     print("\nCreating VRF...")
     url = f"https://{ND_SERVER}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs"
 
@@ -151,8 +158,8 @@ def get_switch_serial():
 
     lan_attach_list = []
 
-    for switch, serial in switch_dict.items():
-        print(switch, serial)
+    for switch, serial in leaf_switch_dict.items():
+        # print(switch, serial)
         attachment_template = {
             "fabric": VXLAN_FABRIC,
             "vrfName": VRF_NAME,
@@ -163,9 +170,8 @@ def get_switch_serial():
             "extensionValues": "",
             "instanceValues": "{\"loopbackId\":\"\",\"loopbackIpAddress\":\"\",\"loopbackIpV6Address\":\"\"}"
         }
-        #print("\n", attachment_template)
+        # print("\n", attachment_template)
         lan_attach_list.append(attachment_template)
-
 
     attachlist_build = [
         {
@@ -174,16 +180,16 @@ def get_switch_serial():
         }
         ]
 
-
     new_payload = json.dumps(attachlist_build)
     print("\n", "printing composite build 'NEW PAYLOAD' of list")
     print(type(new_payload))
     print("\n", new_payload)
 
 
-
+# Consolidate this with get_switch_serial function...
 def attach_vrf(token):
-    """ A doc string. """
+    """ Attach VRF to leafs. """
+
     print("\nAttaching VRF...")
     url = f"https://{ND_SERVER}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs/attachments"
 
@@ -228,7 +234,8 @@ def attach_vrf(token):
 
 
 def deploy_vrf(token):
-    """ A doc string. """
+    """ Deploy VRF. """
+
     print("\nDeploying VRF...")
     url = f"https://{ND_SERVER}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs/deployments"
 
@@ -247,7 +254,8 @@ def deploy_vrf(token):
 
 
 def create_network(token):
-    """ A doc string. """
+    """ Create networks. """
+
     print("\nCreating network...")
 
     url = f"https://{ND_SERVER}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks"
@@ -304,8 +312,10 @@ def create_network(token):
     print(response.text)
     status_check(response)
 
+
 def attach_network(token):
-    """ A doc string. """
+    """ Attach network to switches and assing access ports. """
+
     print("\nAttaching network...")
 
     url = f"https://{ND_SERVER}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks/attachments"
@@ -361,7 +371,7 @@ def attach_network(token):
 
 
 def deploy_network(token):
-    """ A doc string. """
+    """ Deploy the networks. """
     print("\nDeploying network on interfaces...")
 
     url = f"https://{ND_SERVER}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks/deployments"
@@ -381,8 +391,7 @@ def deploy_network(token):
 
 
 def main():
-    """ A doc string. """
-
+    """ Main section to run functions. """
 
     tok = login()
  #   time.sleep(4)
