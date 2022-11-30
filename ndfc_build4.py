@@ -3,17 +3,11 @@
 # working on loops for switch attachments
 # to view doc stings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
 
-###
-#  this version attempts using a iteration of switchports, unsuccessfully... Appears to be a limitation in the API,
-# which doesn't allow for multiple switch ports. Error with a complaint can't deserialize...
-###
-
 
 import json
 import time
 import sys
 import os
-#import pickle
 import requests
 import urllib3
 
@@ -58,9 +52,11 @@ leaf_switch_dict = {
 
 #SWITCH1_SWITCHPORTS = "Ethernet1/26"
 #SWITCH2_SWITCHPORTS = "Ethernet1/26"
+
+# The Value must be a string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
 switchport_dict = {
-    "FDO210518NL": ["Ethernet1/2", "Ethernet1/3"],
-    "FDO20352B5P": ["Ethernet1/4"]
+    "FDO210518NL": "Ethernet1/18",
+    "FDO20352B5P": ""
 }
 
 
@@ -355,6 +351,7 @@ def attach_network(token):
     print("\nAttaching network...")
 
     url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks/attachments"
+   
 
     headers = {
         'Authorization': str(token),
@@ -376,21 +373,11 @@ def attach_network(token):
 
     for serial in leaf_switch_dict.values():
         if serial in switchport_dict.keys():
-            #print(i)
-            #print(switchport_dict[i])
-            #serialized = pickle.dumps(switchport_dict[serial])
-            #deserialized_switch = pickle.loads(serialized)
-            #print()
-            #print(deserialized_switch)
-            print()
-
             lan_attachment_template = {
                 "fabric": VXLAN_FABRIC,
                 "networkName": L2_NETWORK_NAME,
                 "serialNumber": serial,
-                #"switchPorts": deserialized_switch,
-                #"switchPorts": ' '.join(switchport_dict[serial]),
-                "switchports": switchport_dict[serial],
+                "switchPorts": switchport_dict[serial],
                 "detachSwitchPorts": "",
                 "vlan": L2_VLAN_ID,
                 "dot1QVlan": 1,
@@ -471,7 +458,7 @@ def deploy_network(token):
     print("\nDeploying network on interfaces...")
 
     url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks/deployments"
-
+    
     headers = {
         'Authorization': str(token),
         'Content-Type': 'application/json'
@@ -506,19 +493,16 @@ def main():
 #    time.sleep(15)
     # Need longer wait time after deploy (10sec)
 
-
 #    create_network(tok)
 #    time.sleep(8)
-
 
     attach_network(tok)
     time.sleep(10)
 
-    '''
     deploy_network(tok)
     time.sleep(15)
     # Need longer wait time after deploy (10sec)
-    '''
+
 
 if __name__ == '__main__':
     main()

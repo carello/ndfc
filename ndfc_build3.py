@@ -44,8 +44,8 @@ L2_NETWORK_NAME = "cpNetwork_30222"
 SWITCH1_SWITCHPORTS = "Ethernet1/26"
 SWITCH2_SWITCHPORTS = "Ethernet1/26"
 
-#SWITCH1 = "FDO210518NL"
-#SWITCH2 = "FDO20352B5P"
+SWITCH1 = "FDO210518NL"
+SWITCH2 = "FDO20352B5P"
 leaf_switch_dict = {
     "leaf1": "FDO210518NL",
     "leaf2": "FDO20352B5P"
@@ -386,10 +386,12 @@ def attach_network(token):
         }
     ])
 
+    print(payload)
     response = requests.request(
         "POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
     print(response.text)
+    
     status_check(response)
 
 
@@ -433,9 +435,8 @@ def main():
 #    time.sleep(15)
     # Need longer wait time after deploy (10sec)
 
-    ''''
-    create_network(tok)
-    time.sleep(8)
+#    create_network(tok)
+#    time.sleep(8)
 
     attach_network(tok)
     time.sleep(10)
@@ -443,7 +444,7 @@ def main():
     deploy_network(tok)
     time.sleep(15)
     # Need longer wait time after deploy (10sec)
-    '''
+
 
 if __name__ == '__main__':
     main()
