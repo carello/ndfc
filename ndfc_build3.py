@@ -153,6 +153,7 @@ def create_vrf(token):
 
 
 # Experimenting with iteration over switch dict
+# Rename when ready to attach_vrf_new
 def get_switch_serial(token):
     """ Creating iteration of switch dictionary """
 
@@ -206,6 +207,7 @@ def get_switch_serial(token):
 
 
 # Consolidate this with get_switch_serial function...
+# Delete this when done
 def attach_vrf(token):
     """ Attach VRF to leafs. """
 
