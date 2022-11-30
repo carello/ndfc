@@ -11,9 +11,6 @@ import os
 import requests
 import urllib3
 
-
-#from requests.packages.urllib3.exceptions import InsecureRequestWarning
-#requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
 # Enter credentials and server IP
@@ -28,10 +25,6 @@ VRF_SEGMENT_ID = "50222"
 VRF_NAME = "cpVRF-50222"
 VRF_VLAN_ID = "2222"
 VXLAN_FABRIC = "Demo1"
-
-# I think this is redundant and could be deleted
-#VRF_VLAN = "2222"
-
 ASN = "65111"
 
 ##########################
@@ -41,22 +34,15 @@ L2_VLAN_ID = "2322"
 L2_SEGMENT_ID = "30222"
 L2_NETWORK_NAME = "cpNetwork_30222"
 
-# These needs to be a list
-
-#SWITCH1 = "FDO210518NL"
-#SWITCH2 = "FDO20352B5P"
 leaf_switch_dict = {
     "leaf1": "FDO210518NL",
     "leaf2": "FDO20352B5P"
     }
 
-#SWITCH1_SWITCHPORTS = "Ethernet1/26"
-#SWITCH2_SWITCHPORTS = "Ethernet1/26"
-
 # The Value must be a string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
 switchport_dict = {
-    "FDO210518NL": "Ethernet1/18",
-    "FDO20352B5P": ""
+    "FDO210518NL": "",
+    "FDO20352B5P": "Ethernet1/30,Ethernet1/31"
 }
 
 
@@ -160,7 +146,6 @@ def create_vrf(token):
     status_check(response)
 
 
-# Rename when ready to attach_vrf_new
 def attach_vrf_new(token):
     """ Creating iteration of switch dictionary """
 
@@ -212,58 +197,6 @@ def attach_vrf_new(token):
     print(response.text)
     #status_check(response)
 
-
-
-'''
-# *** Consolidate this with get_switch_serial function...Delete this when done ***
-
-def attach_vrf(token):
-    """ Attach VRF to leafs. """
-
-    print("Attaching VRF...")
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs/attachments"
-
-    headers = {
-        'Authorization': str(token),
-        'Content-Type': 'application/json'
-    }
-
-    payload = json.dumps([
-        {
-            "vrfName": VRF_NAME,
-            "lanAttachList": [
-        {
-            "fabric": VXLAN_FABRIC,
-            "vrfName": VRF_NAME,
-            "serialNumber": SWITCH1,
-            "vlan": VRF_VLAN_ID,
-            "freeformConfig": "",
-            "deployment": True,
-            "extensionValues": "",
-            "instanceValues": "{\"loopbackId\":\"\",\"loopbackIpAddress\":\"\",\"loopbackIpV6Address\":\"\"}"
-        },
-        {
-            "fabric": VXLAN_FABRIC,
-            "vrfName": VRF_NAME,
-            "serialNumber": SWITCH2,
-            "vlan": VRF_VLAN_ID,
-            "freeformConfig": "",
-            "deployment": True,
-            "extensionValues": "",
-            "instanceValues": "{\"loopbackId\":\"\",\"loopbackIpAddress\":\"\",\"loopbackIpV6Address\":\"\"}"
-        }
-        ]
-    }
-    ])
-
-    print(payload)
-
-    #response = requests.request(
-    #    "POST", url, headers=headers, data=payload, verify=False, timeout=3)
-
-    #print(response.text)
-    #status_check(response)
-'''
 
 def deploy_vrf(token):
     """ Deploy VRF. """
@@ -352,22 +285,10 @@ def attach_network(token):
 
     url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks/attachments"
    
-
     headers = {
         'Authorization': str(token),
         'Content-Type': 'application/json'
     }
-
-    ###### working example
-    '''
-    vrf_lan_attach_list = []
-
-    for i in leaf_switch_dict.values():
-        if i in switchport_dict.keys():
-            #print(i)
-            #print(switchport_dict[i])
-            vrf_attach_list.append(switchport_dict[i])
-    '''
 
     vrf_lan_attach_list = []
 
@@ -402,48 +323,9 @@ def attach_network(token):
     #print()
 
     payload = json.dumps(attachlist_vrf_lan_build)
-    print(payload)
+    #print(payload)
     print()
 
-    '''
-    payload = json.dumps([
-        {
-            "networkName": L2_NETWORK_NAME,
-            "lanAttachList": [
-                {
-                    "fabric": VXLAN_FABRIC,
-                    "networkName": L2_NETWORK_NAME,
-                    "serialNumber": SWITCH1,
-                    "switchPorts": SWITCH1_SWITCHPORTS,
-                    "detachSwitchPorts": "",
-                    "vlan": L2_VLAN_ID,
-                    "dot1QVlan": 1,
-                    "untagged": False,
-                    "freeformConfig": "",
-                    "deployment": True,
-                    "toPorts": "",
-                    "extensionValues": "",
-                    "instanceValues": ""
-                },
-                {
-                    "fabric": VXLAN_FABRIC,
-                    "networkName": L2_NETWORK_NAME,
-                    "serialNumber": SWITCH2,
-                    "switchPorts": SWITCH2_SWITCHPORTS,
-                    "detachSwitchPorts": "",
-                    "vlan": L2_VLAN_ID,
-                    "dot1QVlan": 1,
-                    "untagged": False,
-                    "freeformConfig": "",
-                    "deployment": True,
-                    "toPorts": "",
-                    "extensionValues": "",
-                    "instanceValues": ""
-                }
-            ]
-        }
-    ])
-    '''
     response = requests.request(
         "POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
@@ -479,22 +361,18 @@ def main():
     tok = login()
     time.sleep(4)
 
-#    create_vrf(tok)
-#    time.sleep(8)
+    create_vrf(tok)
+    time.sleep(8)
 
-#    attach_vrf_new(tok)
-#    time.sleep(10)
+    attach_vrf_new(tok)
+    time.sleep(10)
 
-## This was orignail, delete once get_switch_serial is working
-##    attach_vrf(tok)
-##    time.sleep(10)
-
-#    deploy_vrf(tok)
-#    time.sleep(15)
+    deploy_vrf(tok)
+    time.sleep(15)
     # Need longer wait time after deploy (10sec)
 
-#    create_network(tok)
-#    time.sleep(8)
+    create_network(tok)
+    time.sleep(8)
 
     attach_network(tok)
     time.sleep(10)
