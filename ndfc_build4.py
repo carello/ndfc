@@ -17,6 +17,8 @@ urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 ND_HOST = "https://10.91.86.229"
 USER = os.environ['USER']
 PASSWORD = os.environ['PASSWORD']
+BEGIN_API = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/"
+#print(BEGIN_API)
 
 #########################
 # L3 VRF Variables
@@ -41,7 +43,7 @@ leaf_switch_dict = {
 
 # The Value must be a string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
 switchport_dict = {
-    "FDO210518NL": "",
+    "FDO210518NL": "Ethernet1/6",
     "FDO20352B5P": "Ethernet1/30,Ethernet1/31"
 }
 
@@ -59,6 +61,7 @@ def login():
 
     print("Logging into Nexus Dashboard...")
     url = f"{ND_HOST}/login"
+    #print(url)
 
     payload = json.dumps({
         "userName": USER,
@@ -67,11 +70,14 @@ def login():
     })
     headers = {'Content-Type': 'application/json'}
 
-    response = requests.request(
-        "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    status_check(response)
+
     data = json.loads(response.text)['token']
 
     #print(data)
+    #print(response.text)
+
     return data
 
 
@@ -79,7 +85,8 @@ def create_vrf(token):
     """ Create a new VRF. """
 
     print("\nCreating VRF...")
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs"
+    url = f"{BEGIN_API}{VXLAN_FABRIC}/vrfs"
+    #print(url)
 
     vrf_temp_cfg = {
         "advertiseDefaultRouteFlag": True,
@@ -139,8 +146,7 @@ def create_vrf(token):
         'Authorization': str(token)
     }
 
-    response = requests.request(
-        "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
     print(response.text)
     status_check(response)
@@ -150,7 +156,8 @@ def attach_vrf_new(token):
     """ Creating iteration of switch dictionary """
 
     print("\nAttaching VRF...")
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs/attachments"
+    url = f"{BEGIN_API}{VXLAN_FABRIC}/vrfs/attachments"
+    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -159,8 +166,8 @@ def attach_vrf_new(token):
 
     lan_attach_list = []
 
-    for switch, serial in leaf_switch_dict.items():
-        # print(switch, serial)
+    for serial in leaf_switch_dict.values():
+        # print(serial)
         attachment_template = {
             "fabric": VXLAN_FABRIC,
             "vrfName": VRF_NAME,
@@ -185,24 +192,24 @@ def attach_vrf_new(token):
     #print("\nAttach list build")
     #print(attachlist_build)
 
-    new_payload = json.dumps(attachlist_build)
+    payload = json.dumps(attachlist_build)
 
     #print("\n", "printing composite build 'NEW PAYLOAD' with json.dumps list")
     #print(type(new_payload))
     #print(new_payload)
 
-    response = requests.request(
-        "POST", url, headers=headers, data=new_payload, verify=False, timeout=3)
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
     print(response.text)
-    #status_check(response)
+    status_check(response)
 
 
 def deploy_vrf(token):
     """ Deploy VRF. """
 
     print("\nDeploying VRF...")
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/vrfs/deployments"
+    url = f"{BEGIN_API}{VXLAN_FABRIC}/vrfs/deployments"
+    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -211,10 +218,9 @@ def deploy_vrf(token):
 
     payload = json.dumps({"vrfNames": VRF_NAME})
 
-    response = requests.request(
-        "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
-    print(response)
+    print(response.text)
     status_check(response)
 
 
@@ -223,7 +229,8 @@ def create_network(token):
 
     print("\nCreating network...")
 
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks"
+    url = f"{BEGIN_API}{VXLAN_FABRIC}/networks"
+    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -271,8 +278,7 @@ def create_network(token):
         "hierarchicalKey": None
     })
 
-    response = requests.request(
-        "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
     print(response.text)
     status_check(response)
@@ -283,8 +289,9 @@ def attach_network(token):
 
     print("\nAttaching network...")
 
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks/attachments"
-   
+    url = f"{BEGIN_API}{VXLAN_FABRIC}/networks/attachments"
+    #print(url)
+
     headers = {
         'Authorization': str(token),
         'Content-Type': 'application/json'
@@ -324,23 +331,20 @@ def attach_network(token):
 
     payload = json.dumps(attachlist_vrf_lan_build)
     #print(payload)
-    print()
 
-    response = requests.request(
-        "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
-    print()
     print(response.text)
-    print(response)
-    #status_check(response)
+    status_check(response)
 
 
 def deploy_network(token):
     """ Deploy the networks. """
     print("\nDeploying network on interfaces...")
 
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/{VXLAN_FABRIC}/networks/deployments"
-    
+    url = f"{BEGIN_API}{VXLAN_FABRIC}/networks/deployments"
+    #print(url)
+
     headers = {
         'Authorization': str(token),
         'Content-Type': 'application/json'
@@ -348,8 +352,7 @@ def deploy_network(token):
 
     payload = json.dumps({"networkNames": L2_NETWORK_NAME})
 
-    response = requests.request(
-        "POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
     print(response.text)
     status_check(response)
@@ -369,7 +372,6 @@ def main():
 
     deploy_vrf(tok)
     time.sleep(15)
-    # Need longer wait time after deploy (10sec)
 
     create_network(tok)
     time.sleep(8)
@@ -379,7 +381,6 @@ def main():
 
     deploy_network(tok)
     time.sleep(15)
-    # Need longer wait time after deploy (10sec)
 
 
 if __name__ == '__main__':
