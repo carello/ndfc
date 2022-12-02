@@ -1,5 +1,5 @@
 # ndfc
 
-Branch DEV1
+Branch DEV2
 
-working on loops for switches
+Branch DEV1 has been merged into main. Started a new branch (DEV2) from main
