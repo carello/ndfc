@@ -62,16 +62,6 @@ switchport_dict = {
 ####################################
 # *** Functions ***
 ####################################
-def status_check(resp):
-    """ Check request status return code. """
-
-    if resp.status_code != 200:
-        print("\nERROR... exiting program.")
-        sys.exit()
-    else:
-        print("--> Success")
-
-
 def url_ok(uri, head, pay):
     """ Validate URL availability """
 
@@ -177,16 +167,13 @@ def create_vrf(token):
     url_ok(url, headers, payload)
     print("-> Success.")
 
-    #print(resp.text)
 
 
 
 def attach_vrf_new(token):
     """ Creating iteration of switch dictionary """
 
-    print("\n-> Attaching VRF...")
     url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/attachments"
-    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -196,7 +183,6 @@ def attach_vrf_new(token):
     lan_attach_list = []
 
     for serial in leaf_switch_dict.values():
-        # print(serial)
         attachment_template = {
             "fabric": VXLAN_FABRIC,
             "vrfName": VRF_NAME,
@@ -207,36 +193,25 @@ def attach_vrf_new(token):
             "extensionValues": "",
             "instanceValues": "{\"loopbackId\":\"\",\"loopbackIpAddress\":\"\",\"loopbackIpV6Address\":\"\"}"
         }
-        # print("\n", attachment_template)
-        lan_attach_list.append(attachment_template)
 
-    #print("\nPrinting lan attach list")
-    #print(lan_attach_list)
+        lan_attach_list.append(attachment_template)
 
     attachlist_build = [{
             "vrfName": VRF_NAME,
             "lanAttachList": lan_attach_list
             }]
 
-    #print("\nAttach list build")
-    #print(attachlist_build)
-
     payload = json.dumps(attachlist_build)
 
-    #print("\n", "printing composite build 'NEW PAYLOAD' with json.dumps list")
-    #print(type(new_payload))
-    #print(new_payload)
+    print("\n-> Attaching VRF...")
+    url_ok(url, headers, payload)
+    print("-> Success.")
 
-    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
-
-    print(response.text)
-    #status_check(response)
 
 
 def deploy_vrf(token):
     """ Deploy VRF. """
 
-    print("\n-> Deploying VRF...")
     url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/deployments"
     #print(url)
 
@@ -247,19 +222,17 @@ def deploy_vrf(token):
 
     payload = json.dumps({"vrfNames": VRF_NAME})
 
-    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    print("\n-> Depploying VRF...")
+    url_ok(url, headers, payload)
+    print("-> Success.")
 
-    #print(response.text)
-    #status_check(response)
+
 
 
 def create_network(token):
     """ Create networks. """
 
-    print("\n-> Creating network...")
-
     url = f"{ROOT_API}{VXLAN_FABRIC}/networks"
-    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -307,19 +280,16 @@ def create_network(token):
         "hierarchicalKey": None
     })
 
-    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    print("\n-> Creating Network...")
+    url_ok(url, headers, payload)
+    print("-> Success.")
 
-    #print(response.text)
-    #status_check(response)
 
 
 def attach_network(token):
     """ Attach network to switches and assing access ports. """
 
-    print("\n-> Attaching network...")
-
     url = f"{ROOT_API}{VXLAN_FABRIC}/networks/attachments"
-    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -347,32 +317,22 @@ def attach_network(token):
                 }
             vrf_lan_attach_list.append(lan_attachment_template)
 
-    #print(vrf_lan_attach_list)
-    #print()
-
     attachlist_vrf_lan_build = [{
         "networkName": L2_NETWORK_NAME,
         "lanAttachList": vrf_lan_attach_list
     }]
 
-    #print(attachlist_vrf_lan_build)
-    #print()
-
     payload = json.dumps(attachlist_vrf_lan_build)
-    #print(payload)
 
-    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
-
-    print(response.text)
-    #status_check(response)
+    print("\n-> Attaching Network...")
+    url_ok(url, headers, payload)
+    print("-> Success.")
 
 
 def deploy_network(token):
     """ Deploy the networks. """
-    print("\n-> Deploying network on interfaces...")
 
     url = f"{ROOT_API}{VXLAN_FABRIC}/networks/deployments"
-    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -381,10 +341,10 @@ def deploy_network(token):
 
     payload = json.dumps({"networkNames": L2_NETWORK_NAME})
 
-    response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
+    print("\n-> Deploying network on interfaces...")
+    url_ok(url, headers, payload)
+    print("-> Success.")
 
-    #print(response.text)
-    #status_check(response)
 
 ####################################
 ####################################
@@ -396,25 +356,32 @@ def main():
     """ Main section to run functions. """
 
     tok = login()
+    print("\nPlease wait...")
     time.sleep(4)
 
     create_vrf(tok)
+    print("Please wait...")
     time.sleep(8)
 
-#    attach_vrf_new(tok)
-#    time.sleep(10)
+    attach_vrf_new(tok)
+    print("Please wait...")
+    time.sleep(10)
 
-#    deploy_vrf(tok)
-#    time.sleep(15)
+    deploy_vrf(tok)
+    print("Please wait...")
+    time.sleep(15)
 
-#    create_network(tok)
-#    time.sleep(8)
+    create_network(tok)
+    print("Please wait...")
+    time.sleep(8)
 
-#    attach_network(tok)
-#    time.sleep(10)
+    attach_network(tok)
+    print("Please wait...")
+    time.sleep(10)
 
-#    deploy_network(tok)
-#    time.sleep(15)
+    deploy_network(tok)
+    print("Please wait...")
+    time.sleep(15)
 
 
 if __name__ == '__main__':
