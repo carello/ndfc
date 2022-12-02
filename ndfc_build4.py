@@ -1,8 +1,6 @@
-""" A module docstring placeholder """
+""" This program executes NDFC APIs to configure: VRFs, networks and deployment """
 
-# working on loops for switch attachments
 # to view doc stings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
-
 
 import json
 import time
@@ -41,7 +39,7 @@ leaf_switch_dict = {
     "leaf2": "FDO20352B5P"
     }
 
-# The Value must be a string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
+# The Value must be a type string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
 switchport_dict = {
     "FDO210518NL": "Ethernet1/6",
     "FDO20352B5P": "Ethernet1/30,Ethernet1/31"
@@ -52,14 +50,16 @@ def status_check(resp):
     """ Check request status return code. """
 
     if resp.status_code != 200:
-        print("Error...")
+        print("\nERROR... exiting program.")
         sys.exit()
+    else:
+        print("--> Success")
 
 
 def login():
     """ Login into ND and return a token. """
 
-    print("Logging into Nexus Dashboard...")
+    print("\n-> Logging into Nexus Dashboard...")
     url = f"{ND_HOST}/login"
     #print(url)
 
@@ -84,7 +84,7 @@ def login():
 def create_vrf(token):
     """ Create a new VRF. """
 
-    print("\nCreating VRF...")
+    print("\n-> Creating VRF...")
     url = f"{BEGIN_API}{VXLAN_FABRIC}/vrfs"
     #print(url)
 
@@ -148,14 +148,14 @@ def create_vrf(token):
 
     response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
-    print(response.text)
+    #print(response.text)
     status_check(response)
 
 
 def attach_vrf_new(token):
     """ Creating iteration of switch dictionary """
 
-    print("\nAttaching VRF...")
+    print("\n-> Attaching VRF...")
     url = f"{BEGIN_API}{VXLAN_FABRIC}/vrfs/attachments"
     #print(url)
 
@@ -207,7 +207,7 @@ def attach_vrf_new(token):
 def deploy_vrf(token):
     """ Deploy VRF. """
 
-    print("\nDeploying VRF...")
+    print("\n-> Deploying VRF...")
     url = f"{BEGIN_API}{VXLAN_FABRIC}/vrfs/deployments"
     #print(url)
 
@@ -220,14 +220,14 @@ def deploy_vrf(token):
 
     response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
-    print(response.text)
+    #print(response.text)
     status_check(response)
 
 
 def create_network(token):
     """ Create networks. """
 
-    print("\nCreating network...")
+    print("\n-> Creating network...")
 
     url = f"{BEGIN_API}{VXLAN_FABRIC}/networks"
     #print(url)
@@ -280,14 +280,14 @@ def create_network(token):
 
     response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
-    print(response.text)
+    #print(response.text)
     status_check(response)
 
 
 def attach_network(token):
     """ Attach network to switches and assing access ports. """
 
-    print("\nAttaching network...")
+    print("\n-> Attaching network...")
 
     url = f"{BEGIN_API}{VXLAN_FABRIC}/networks/attachments"
     #print(url)
@@ -340,7 +340,7 @@ def attach_network(token):
 
 def deploy_network(token):
     """ Deploy the networks. """
-    print("\nDeploying network on interfaces...")
+    print("\n-> Deploying network on interfaces...")
 
     url = f"{BEGIN_API}{VXLAN_FABRIC}/networks/deployments"
     #print(url)
@@ -354,7 +354,7 @@ def deploy_network(token):
 
     response = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=3)
 
-    print(response.text)
+    #print(response.text)
     status_check(response)
 
 
@@ -385,4 +385,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-    print("\nTadah!!!")
+    print("\nProgram Completed!")
