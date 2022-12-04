@@ -9,8 +9,8 @@
 #    
 
 master_list = [
-["leaf1", "FDO210518NL", "Ethernet1/30"],
-["leaf2", "FDO20352B5P", "Ethernet1/30,Ethernet1/31"]
+["leaf1", "FDO210518NL", "Ethernet1/21"],
+["leaf2", "FDO20352B5P", ""]
 ]
 
 # Iterate over 'serial_switchports', extract Serial number and ports into a dictionary

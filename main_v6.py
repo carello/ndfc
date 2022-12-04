@@ -17,8 +17,8 @@ urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 # *** Set up CONSTANTS ***
 ##############################
 LOGGING_STATUS = True
-logging.basicConfig(filename='example.log', format="%(asctime)s - %(message)s",
-    encoding='utf-8', level=logging.WARNING)
+logging.basicConfig(filename='ndfc.log', format="%(asctime)s - %(message)s",
+    encoding='utf-8', level=logging.DEBUG)
 
 # Enter credentials and server IP
 ND_HOST = "https://10.91.86.229"
@@ -74,10 +74,22 @@ def url_ok(uri, head, pay):
     except requests.exceptions.RequestException as err:
         print("Request Exception found, please see logs. Exiting program...")
         if LOGGING_STATUS:
-            logging.warning(err)
+            logging.debug(err)
         sys.exit(1)
 
     return response
+
+
+def check_validity(resp_text_output):
+    """ Check if api execution is proper, 'SUCCESS' """
+
+    for item, output in resp_text_output.items():
+        check_result = output
+        if check_result.find("SUCCESS") == -1:
+            print("Something went wrong, invalid. Please check logs.")
+            out = item, output
+            logging.debug(out)
+            sys.exit(1)
 
 
 def login():
@@ -347,14 +359,18 @@ def attach_network(token):
 
     print("\n-> Attaching Network...")
     resp = url_ok(url, headers, payload)
-    # Troubleshooting - todo: revise to use logging
+    # Troubleshooting - revised to use logging
     #print()
     #print(resp.status_code)
     #print()
     #print(resp.content)
     #print()
-    #print(resp.text)
-    #print("-> Success.")
+    print(resp.text)
+
+    resp_text_output = resp.json()
+    check_validity(resp_text_output)
+
+    print("-> Success.")
 
 
 def deploy_network(token):
@@ -387,29 +403,29 @@ def main():
     print("Please wait...")
     time.sleep(4)
 
-    create_vrf(tok)
-    print("Please wait...")
-    time.sleep(8)
+#    create_vrf(tok)
+#    print("Please wait...")
+#    time.sleep(8)
 
-    attach_vrf_new(tok)
-    print("Please wait...")
-    time.sleep(10)
+#    attach_vrf_new(tok)
+#    print("Please wait...")
+#    time.sleep(10)
 
-    deploy_vrf(tok)
-    print("Please wait...")
-    time.sleep(15)
+#    deploy_vrf(tok)
+#    print("Please wait...")
+#    time.sleep(15)
 
-    create_network(tok)
-    print("Please wait...")
-    time.sleep(8)
+#    create_network(tok)
+#    print("Please wait...")
+#    time.sleep(8)
 
     attach_network(tok)
     print("Please wait...")
     time.sleep(10)
 
-    deploy_network(tok)
-    print("Please wait...")
-    time.sleep(15)
+#    deploy_network(tok)
+#    print("Please wait...")
+#    time.sleep(15)
 
 
 if __name__ == '__main__':
