@@ -9,6 +9,7 @@ import os
 import logging
 import requests
 import urllib3
+from data import dbcontent
 
 urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
@@ -42,19 +43,20 @@ L2_NETWORK_NAME = "cpNetwork_30222"
 ####################################
 
 
-####################################
+#####################################################
 # *** Set up switches and ports ***
-####################################
-leaf_switch_dict = {
-    "leaf1": "FDO210518NL",
-    "leaf2": "FDO20352B5P"
-    }
+# Deprecate this and use data/dbcontent.py instead
+#####################################################
+#leaf_switch_dict = {
+#    "leaf1": "FDO210518NL",
+#    "leaf2": "FDO20352B5P"
+#    }
 
 # The Value must be a type string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
-switchport_dict = {
-    "FDO210518NL": "Ethernet1/6",
-    "FDO20352B5P": "Ethernet1/30,Ethernet1/31"
-}
+#switchport_dict = {
+#    "FDO210518NL": "Ethernet1/20",
+#    "FDO20352B5P": "Ethernet1/20,Ethernet1/21"
+#}
 ####################################
 ####################################
 
@@ -180,9 +182,12 @@ def attach_vrf_new(token):
         'Content-Type': 'application/json'
     }
 
+    # Get device and serial dictionary from data/dbcontent.py
+    dev_serial_result = dbcontent.dev_serial(dbcontent.master_list)
+
     lan_attach_list = []
 
-    for serial in leaf_switch_dict.values():
+    for serial in dev_serial_result.values():
         attachment_template = {
             "fabric": VXLAN_FABRIC,
             "vrfName": VRF_NAME,
@@ -202,6 +207,7 @@ def attach_vrf_new(token):
             }]
 
     payload = json.dumps(attachlist_build)
+    #print(payload)
 
     print("\n-> Attaching VRF...")
     url_ok(url, headers, payload)
@@ -222,7 +228,7 @@ def deploy_vrf(token):
 
     payload = json.dumps({"vrfNames": VRF_NAME})
 
-    print("\n-> Depploying VRF...")
+    print("\n-> Deploying VRF...")
     url_ok(url, headers, payload)
     print("-> Success.")
 
@@ -296,15 +302,29 @@ def attach_network(token):
         'Content-Type': 'application/json'
     }
 
+    dev_serial_result = dbcontent.dev_serial(dbcontent.master_list)
+    # Troubleshooting
+    #print(dev_serial_result)
+    #print()
+
+    serial_swports_result = dbcontent.serial_switchports(dbcontent.master_list)
+    # Troubleshooting
+    #print(serial_swports_result)
+    #print()
+
     vrf_lan_attach_list = []
 
-    for serial in leaf_switch_dict.values():
-        if serial in switchport_dict.keys():
+    for serial in dev_serial_result.values():
+        if serial in serial_swports_result.keys():
+            # Troubleshooting
+            #print(serial_swports_result[serial])
+            #print()
+
             lan_attachment_template = {
                 "fabric": VXLAN_FABRIC,
                 "networkName": L2_NETWORK_NAME,
                 "serialNumber": serial,
-                "switchPorts": switchport_dict[serial],
+                "switchPorts": serial_swports_result[serial],
                 "detachSwitchPorts": "",
                 "vlan": L2_VLAN_ID,
                 "dot1QVlan": 1,
@@ -323,10 +343,18 @@ def attach_network(token):
     }]
 
     payload = json.dumps(attachlist_vrf_lan_build)
+    #print(payload)
 
     print("\n-> Attaching Network...")
-    url_ok(url, headers, payload)
-    print("-> Success.")
+    resp = url_ok(url, headers, payload)
+    # Troubleshooting - todo: revise to use logging
+    #print()
+    #print(resp.status_code)
+    #print()
+    #print(resp.content)
+    #print()
+    #print(resp.text)
+    #print("-> Success.")
 
 
 def deploy_network(token):
@@ -341,7 +369,7 @@ def deploy_network(token):
 
     payload = json.dumps({"networkNames": L2_NETWORK_NAME})
 
-    print("\n-> Deploying network on interfaces...")
+    print("\n-> Deploying network and interfaces...")
     url_ok(url, headers, payload)
     print("-> Success.")
 
@@ -356,7 +384,7 @@ def main():
     """ Main section to run functions. """
 
     tok = login()
-    print("\nPlease wait...")
+    print("Please wait...")
     time.sleep(4)
 
     create_vrf(tok)
