@@ -9,7 +9,7 @@
 #    
 
 master_list = [
-["leaf1", "FDO210518NL", "Ethernet1/19"],
+["leaf1", "FDO210518NL", "Ethernet1/21"],
 ["leaf2", "FDO20352B5P", ""]
 ]
 

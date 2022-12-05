@@ -19,12 +19,19 @@ from data import dbcontent
 
 urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
+# Set up switches. Perhaps do ARGSPARSE in future
+LOGGING_STATUS = True
+
+logging.basicConfig(filename='ndfc.log', format="%(asctime)s - %(message)s",
+    encoding='utf-8', level=logging.DEBUG)
+
+# Place a blank line at start of execution
+logging.info("\n")
+
+
 ##############################
 # *** Set up CONSTANTS ***
 ##############################
-LOGGING_STATUS = True
-logging.basicConfig(filename='ndfc.log', format="%(asctime)s - %(message)s",
-    encoding='utf-8', level=logging.DEBUG)
 
 # Enter credentials and server IP
 ND_HOST = "https://10.91.86.229"
@@ -93,9 +100,13 @@ def url_ok(uri, head, pay, request_method):
 def check_response_code(resp_code, whereami):
     """ Check response code """
 
+    # Troubleshooting
+    #print(f"YY in 'check_responde_code'- {resp_code}")
+
     if resp_code != 200:
-        print("Something went wrong, invalid. Please check logs.")
-        logging.debug("Returned response code: %s from calling function: %s", resp_code, whereami)
+        print("YY-Something went wrong, invalid. Please check logs.")
+        if LOGGING_STATUS:
+            logging.debug("Returned response code: %s from calling function: %s", resp_code, whereami)
         sys.exit(1)
 
 
@@ -106,7 +117,6 @@ def check_validity(resp_text):
         check_result = output
         if check_result.find("SUCCESS") == -1:
             print("Something went wrong, invalid. Please check logs.")
-            # Added logging condition but untested. Test next...
             if LOGGING_STATUS:
                 out = item, output
                 logging.debug(out)
