@@ -106,8 +106,10 @@ def check_validity(resp_text):
         check_result = output
         if check_result.find("SUCCESS") == -1:
             print("Something went wrong, invalid. Please check logs.")
-            out = item, output
-            logging.debug(out)
+            # Added logging condition but untested. Test next...
+            if LOGGING_STATUS:
+                out = item, output
+                logging.debug(out)
             sys.exit(1)
 
 
