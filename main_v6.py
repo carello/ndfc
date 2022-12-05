@@ -70,7 +70,8 @@ def url_ok(uri, head, pay, request_method):
 
     try:
         print("-> Checking URL request...")
-        response = requests.request(request_method, uri, headers=head, data=pay, verify=False, timeout=3)
+        response = requests.request(request_method, uri, headers=head, data=pay, verify=False, timeout=4)
+        response.raise_for_status()
 
     except requests.exceptions.RequestException as err:
         print("Request Exception found, please see logs. Exiting program...")
@@ -78,22 +79,23 @@ def url_ok(uri, head, pay, request_method):
             logging.debug(err)
         sys.exit(1)
 
+        # This will raise an error on STDOUT and exit
+        #raise SystemExit(err)
+
     return response
+
 
 def check_response_code(resp_code, whereami):
     """ Check response code """
 
     if resp_code != 200:
         print("Something went wrong, invalid. Please check logs.")
-        logging.debug("Returned response code: %s, function: %s", resp_code, whereami)
+        logging.debug("Returned response code: %s from calling function: %s", resp_code, whereami)
         sys.exit(1)
 
 
 def check_validity(resp_text):
     """ Check if api execution is proper, 'SUCCESS' """
-
-    # Troubleshoot
-    #print(resp_code, resp_text)
 
     for item, output in resp_text.items():
         check_result = output
@@ -116,21 +118,18 @@ def login():
     })
     headers = {'Content-Type': 'application/json'}
 
-    print("-> Logging into Nexus Dashboard...")
+    print("\n-> Logging into Nexus Dashboard...")
     resp = url_ok(url, headers, payload, request_method="POST")
+    check_response_code(resp.status_code, whereami=login.__name__)
+
     print("-> Success.")
 
     data = json.loads(resp.text)['token']
 
-    # Troubleshoot
-    #print(data)
-
     return data
 
-def check_vrf_existance(token):
-    """ Check if VRF exists """
-
-    url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
+def check_vrf_network_existance(vrf_net, token):
+    """ Check if VRF or Network exists """
 
     headers = {
         'Content-Type': 'application/json',
@@ -138,8 +137,13 @@ def check_vrf_existance(token):
     }
 
     payload = {}
+    print()
+    # This won't work because if code isn't 200, it exits program.
+    # We want to only validate code and continue.
+    #resp = url_ok(vrf_net, headers, payload, request_method="GET")
 
-    resp = requests.request("GET", url, headers=headers, data=payload, verify=False, timeout=3)
+    # So in this case, we'll need to send this instead. Rudimentary, could use more error checking.
+    resp = requests.request("GET", vrf_net, headers=headers, data=payload, verify=False, timeout=4)
 
     return resp.status_code
 
@@ -148,9 +152,15 @@ def create_vrf(token):
     """ Create a new VRF. """
 
     # Check if vrf exists. If so, exit this function, else continue
-    resp_existance = check_vrf_existance(token)
+    vrf = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
 
-    if resp_existance != 200:
+
+    resp_vrf_existance = check_vrf_network_existance(vrf, token)
+
+    if resp_vrf_existance == 200:
+        print("-> VRF exists. Moving onto next step. ")
+
+    if resp_vrf_existance != 200:
         url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
 
         vrf_temp_cfg = {
@@ -213,12 +223,9 @@ def create_vrf(token):
 
         print("\n-> Creating VRF...")
         resp = url_ok(url, headers, payload, request_method="POST")
-
         check_response_code(resp.status_code, create_vrf.__name__)
 
         print("-> Success.")
-
-    print("\n-> VRF exists. Moving onto next step. ")
 
 
 def attach_vrf_new(token):
@@ -257,12 +264,9 @@ def attach_vrf_new(token):
 
     payload = json.dumps(attachlist_build)
 
-    # Troubleshoot
-    #print(payload)
-
     print("\n-> Attaching VRF...")
     resp = url_ok(url, headers, payload, request_method="POST")
-    check_response_code(resp.status_code, create_vrf.__name__)
+    check_response_code(resp.status_code, attach_vrf_new.__name__)
 
     print("-> Success.")
 
@@ -271,7 +275,6 @@ def deploy_vrf(token):
     """ Deploy VRF. """
 
     url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/deployments"
-    #print(url)
 
     headers = {
         'Authorization': str(token),
@@ -282,67 +285,75 @@ def deploy_vrf(token):
 
     print("\n-> Deploying VRF...")
     resp = url_ok(url, headers, payload, request_method="POST")
-    check_response_code(resp.status_code, create_vrf.__name__)
+    check_response_code(resp.status_code, deploy_vrf.__name__)
 
     print("-> Success.")
 
 
-# STOP
 def create_network(token):
     """ Create networks. """
 
-    url = f"{ROOT_API}{VXLAN_FABRIC}/networks"
+    # Check if Network exists. If so, exit this function, else continue
+    net = f"{ROOT_API}{VXLAN_FABRIC}/networks/{L2_NETWORK_NAME}"
+    resp_net_existance = check_vrf_network_existance(net, token)
 
-    headers = {
-        'Authorization': str(token),
-        'Content-Type': 'application/json'
-    }
+    if resp_net_existance == 200:
+        print("-> Network exists. Moving onto next steps")
 
-    network_template_cfg = {"gatewayIpAddress": GATEWAY_IPADDRESS,
-                            "gatewayIpV6Address": "",
-                            "vlanName": "",
-                            "intfDescription": "",
-                            "mtu": "",
-                            "secondaryGW1": "",
-                            "secondaryGW2": "",
-                            "suppressArp": "false",
-                            "enableIR": "false",
-                            "trmEnabled": "false",
-                            "rtBothAuto": "false",
-                            "enableL3OnBorder": "false",
-                            "mcastGroup": "239.1.1.0",
-                            "dhcpServerAddr1": "",
-                            "dhcpServerAddr2": "",
-                            "vrfDhcp": "",
-                            "loopbackId": "",
-                            "tag": "12345",
-                            "vrfName": VRF_NAME,
-                            "isLayer2Only": "false",
-                            "nveId": 1,
-                            "vlanId": L2_VLAN_ID,
-                            "segmentId": L2_SEGMENT_ID,
-                            "networkName": L2_NETWORK_NAME
-                            }
+    if resp_net_existance != 200:
+        url = f"{ROOT_API}{VXLAN_FABRIC}/networks"
 
-    payload = json.dumps({
-        "fabric": VXLAN_FABRIC,
-        "vrf": VRF_NAME,
-        "networkName": L2_NETWORK_NAME,
-        "displayName": L2_NETWORK_NAME,
-        "networkId": L2_SEGMENT_ID,
-        "networkTemplateConfig": str(network_template_cfg),
-        "networkTemplate": "Default_Network_Universal",
-        "networkExtensionTemplate": "Default_Network_Extension_Universal",
-        "source": None,
-        "serviceNetworkTemplate": None,
-        "interfaceGroups": None,
-        "hierarchicalKey": None
-    })
+        headers = {
+            'Authorization': str(token),
+            'Content-Type': 'application/json'
+        }
 
-    print("\n-> Creating Network...")
-    url_ok(url, headers, payload)
-    print("-> Success.")
+        network_template_cfg = {"gatewayIpAddress": GATEWAY_IPADDRESS,
+                                "gatewayIpV6Address": "",
+                                "vlanName": "",
+                                "intfDescription": "",
+                                "mtu": "",
+                                "secondaryGW1": "",
+                                "secondaryGW2": "",
+                                "suppressArp": "false",
+                                "enableIR": "false",
+                                "trmEnabled": "false",
+                                "rtBothAuto": "false",
+                                "enableL3OnBorder": "false",
+                                "mcastGroup": "239.1.1.0",
+                                "dhcpServerAddr1": "",
+                                "dhcpServerAddr2": "",
+                                "vrfDhcp": "",
+                                "loopbackId": "",
+                                "tag": "12345",
+                                "vrfName": VRF_NAME,
+                                "isLayer2Only": "false",
+                                "nveId": 1,
+                                "vlanId": L2_VLAN_ID,
+                                "segmentId": L2_SEGMENT_ID,
+                                "networkName": L2_NETWORK_NAME
+                                }
 
+        payload = json.dumps({
+            "fabric": VXLAN_FABRIC,
+            "vrf": VRF_NAME,
+            "networkName": L2_NETWORK_NAME,
+            "displayName": L2_NETWORK_NAME,
+            "networkId": L2_SEGMENT_ID,
+            "networkTemplateConfig": str(network_template_cfg),
+            "networkTemplate": "Default_Network_Universal",
+            "networkExtensionTemplate": "Default_Network_Extension_Universal",
+            "source": None,
+            "serviceNetworkTemplate": None,
+            "interfaceGroups": None,
+            "hierarchicalKey": None
+        })
+
+        print("\n-> Creating Network...")
+        resp = url_ok(url, headers, payload, request_method="POST")
+        check_response_code(resp.status_code, create_network.__name__)
+
+        print("-> Success.")
 
 
 def attach_network(token):
@@ -356,23 +367,13 @@ def attach_network(token):
     }
 
     dev_serial_result = dbcontent.dev_serial(dbcontent.master_list)
-    # Troubleshooting
-    #print(dev_serial_result)
-    #print()
 
     serial_swports_result = dbcontent.serial_switchports(dbcontent.master_list)
-    # Troubleshooting
-    #print(serial_swports_result)
-    #print()
 
     vrf_lan_attach_list = []
 
     for serial in dev_serial_result.values():
         if serial in serial_swports_result.keys():
-            # Troubleshooting
-            #print(serial_swports_result[serial])
-            #print()
-
             lan_attachment_template = {
                 "fabric": VXLAN_FABRIC,
                 "networkName": L2_NETWORK_NAME,
@@ -396,17 +397,10 @@ def attach_network(token):
     }]
 
     payload = json.dumps(attachlist_vrf_lan_build)
-    #print(payload)
 
     print("\n-> Attaching Network...")
-    resp = url_ok(url, headers, payload)
-    # Troubleshooting - revised to use logging
-    #print()
-    #print(resp.status_code)
-    #print()
-    #print(resp.content)
-    #print()
-    print(resp.text)
+    resp = url_ok(url, headers, payload, request_method="POST")
+    check_response_code(resp.status_code, attach_network.__name__)
 
     resp_text_output = resp.json()
     check_validity(resp_text_output)
@@ -427,7 +421,9 @@ def deploy_network(token):
     payload = json.dumps({"networkNames": L2_NETWORK_NAME})
 
     print("\n-> Deploying network and interfaces...")
-    url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload, request_method="POST")
+    check_response_code(resp.status_code, deploy_network.__name__)
+
     print("-> Success.")
 
 
@@ -451,25 +447,25 @@ def main():
     print("Please wait...")
     time.sleep(8)
 
-#    attach_vrf_new(tok)
-#    print("Please wait...")
-#    time.sleep(10)
+    attach_vrf_new(tok)
+    print("Please wait...")
+    time.sleep(10)
 
-#    deploy_vrf(tok)
-#    print("Please wait...")
-#    time.sleep(15)
+    deploy_vrf(tok)
+    print("Please wait...")
+    time.sleep(15)
 
-#    create_network(tok)
-#    print("Please wait...")
-#    time.sleep(8)
+    create_network(tok)
+    print("Please wait...")
+    time.sleep(8)
 
-#    attach_network(tok)
-#    print("Please wait...")
-#    time.sleep(10)
+    attach_network(tok)
+    print("Please wait...")
+    time.sleep(10)
 
-#    deploy_network(tok)
-#    print("Please wait...")
-#    time.sleep(15)
+    deploy_network(tok)
+    print("Please wait...")
+    time.sleep(15)
 
 
 if __name__ == '__main__':
