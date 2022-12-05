@@ -1,6 +1,7 @@
 """ This program executes NDFC APIs to configure: VRFs, networks and deployment """
 
 # to view doc stings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
+# Nest step: add in request method GET or POST etc... to 'def url_ok'
 
 import json
 import time
@@ -124,12 +125,34 @@ def login():
 
     return data
 
+def check_vrf_existance(token):
+    """ Check if VRF exists """
+
+    url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': str(token)
+    }
+
+    payload = {}
+    request_meth = "GET"
+
+    # This is for a POST request only. Need to add variable for request method.
+    #resp = url_ok(url, headers, payload)
+
+    # Hard coding this check. Need to address later...
+    resp = requests.request(request_meth, url, headers=headers, data=payload, verify=False, timeout=3)
+
+    check_response_code(resp.status_code, check_vrf_existance.__name__)
+
 
 def create_vrf(token):
     """ Create a new VRF. """
 
     # Add function to check if vrf exists. If so, exit this function.
     # If doesn't exist, continue
+    # use 'check_vrf_existance(token)'
 
     url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
 
@@ -417,9 +440,11 @@ def main():
     print("Please wait...")
     time.sleep(4)
 
-    create_vrf(tok)
-    print("Please wait...")
-    time.sleep(8)
+    check_vrf_existance(tok)
+
+#    create_vrf(tok)
+#    print("Please wait...")
+#    time.sleep(8)
 
 #    attach_vrf_new(tok)
 #    print("Please wait...")
