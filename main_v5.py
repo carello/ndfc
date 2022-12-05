@@ -52,8 +52,8 @@ leaf_switch_dict = {
 
 # The Value must be a type string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
 switchport_dict = {
-    "FDO210518NL": "Ethernet1/6",
-    "FDO20352B5P": "Ethernet1/30,Ethernet1/31"
+    "FDO210518NL": "Ethernet1/20",
+    "FDO20352B5P": "Ethernet1/20,Ethernet1/21"
 }
 ####################################
 ####################################
@@ -323,9 +323,17 @@ def attach_network(token):
     }]
 
     payload = json.dumps(attachlist_vrf_lan_build)
+    print(payload)
 
     print("\n-> Attaching Network...")
-    url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload)
+    # Troubleshooting
+    #print()
+    #print(resp.status_code)
+    #print()
+    #print(resp.content)
+    #print()
+    #print(resp.text)
     print("-> Success.")
 
 
@@ -359,17 +367,17 @@ def main():
     print("\nPlease wait...")
     time.sleep(4)
 
-    create_vrf(tok)
-    print("Please wait...")
-    time.sleep(8)
+#    create_vrf(tok)
+#    print("Please wait...")
+#    time.sleep(8)
 
-    attach_vrf_new(tok)
-    print("Please wait...")
-    time.sleep(10)
+#    attach_vrf_new(tok)
+#    print("Please wait...")
+#    time.sleep(10)
 
-    deploy_vrf(tok)
-    print("Please wait...")
-    time.sleep(15)
+#    deploy_vrf(tok)
+#    print("Please wait...")
+#    time.sleep(15)
 
     create_network(tok)
     print("Please wait...")
@@ -379,9 +387,9 @@ def main():
     print("Please wait...")
     time.sleep(10)
 
-    deploy_network(tok)
-    print("Please wait...")
-    time.sleep(15)
+#    deploy_network(tok)
+#    print("Please wait...")
+#    time.sleep(15)
 
 
 if __name__ == '__main__':
