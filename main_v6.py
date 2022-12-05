@@ -65,12 +65,12 @@ L2_NETWORK_NAME = "cpNetwork_30222"
 ####################################
 # *** Functions ***
 ####################################
-def url_ok(uri, head, pay):
+def url_ok(uri, head, pay, request_method):
     """ Validate URL availability """
 
     try:
         print("-> Checking URL request...")
-        response = requests.request("POST", uri, headers=head, data=pay, verify=False, timeout=3)
+        response = requests.request(request_method, uri, headers=head, data=pay, verify=False, timeout=3)
 
     except requests.exceptions.RequestException as err:
         print("Request Exception found, please see logs. Exiting program...")
@@ -117,10 +117,12 @@ def login():
     headers = {'Content-Type': 'application/json'}
 
     print("-> Logging into Nexus Dashboard...")
-    resp = url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload, request_method="POST")
     print("-> Success.")
 
     data = json.loads(resp.text)['token']
+
+    # Troubleshoot
     #print(data)
 
     return data
@@ -136,90 +138,87 @@ def check_vrf_existance(token):
     }
 
     payload = {}
-    request_meth = "GET"
 
-    # This is for a POST request only. Need to add variable for request method.
-    #resp = url_ok(url, headers, payload)
+    resp = requests.request("GET", url, headers=headers, data=payload, verify=False, timeout=3)
 
-    # Hard coding this check. Need to address later...
-    resp = requests.request(request_meth, url, headers=headers, data=payload, verify=False, timeout=3)
-
-    check_response_code(resp.status_code, check_vrf_existance.__name__)
+    return resp.status_code
 
 
 def create_vrf(token):
     """ Create a new VRF. """
 
-    # Add function to check if vrf exists. If so, exit this function.
-    # If doesn't exist, continue
-    # use 'check_vrf_existance(token)'
+    # Check if vrf exists. If so, exit this function, else continue
+    resp_existance = check_vrf_existance(token)
 
-    url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
+    if resp_existance != 200:
+        url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
 
-    vrf_temp_cfg = {
-        "advertiseDefaultRouteFlag": True,
-        "routeTargetImport": "",
-        "vrfVlanId": VRF_VLAN_ID,
-        "isRPExternal": False,
-        "vrfDescription": "",
-        "disableRtAuto": False,
-        "L3VniMcastGroup": "",
-        "maxBgpPaths": "1",
-        "maxIbgpPaths": "2",
-        "vrfSegmentId": VRF_SEGMENT_ID,
-        "routeTargetExport": "",
-        "ipv6LinkLocalFlag": True,
-        "vrfRouteMap": "FABRIC-RMAP-REDIST-SUBNET",
-        "routeTargetExportMvpn": "",
-        "ENABLE_NETFLOW": False,
-        "configureStaticDefaultRouteFlag": True,
-        "tag": "12345",
-        "rpAddress": "",
-        "trmBGWMSiteEnabled": False,
-        "nveId": "1",
-        "routeTargetExportEvpn": "",
-        "NETFLOW_MONITOR": "",
-        "bgpPasswordKeyType": "3",
-        "bgpPassword": "",
-        "mtu": "9216",
-        "multicastGroup": "",
-        "routeTargetImportMvpn": "",
-        "isRPAbsent": False,
-        "advertiseHostRouteFlag": False,
-        "vrfVlanName": "",
-        "trmEnabled": False,
-        "loopbackNumber": "",
-        "asn": ASN,
-        "vrfIntfDescription": "",
-        "routeTargetImportEvpn": "",
-        "vrfName": VRF_NAME
+        vrf_temp_cfg = {
+            "advertiseDefaultRouteFlag": True,
+            "routeTargetImport": "",
+            "vrfVlanId": VRF_VLAN_ID,
+            "isRPExternal": False,
+            "vrfDescription": "",
+            "disableRtAuto": False,
+            "L3VniMcastGroup": "",
+            "maxBgpPaths": "1",
+            "maxIbgpPaths": "2",
+            "vrfSegmentId": VRF_SEGMENT_ID,
+            "routeTargetExport": "",
+            "ipv6LinkLocalFlag": True,
+            "vrfRouteMap": "FABRIC-RMAP-REDIST-SUBNET",
+            "routeTargetExportMvpn": "",
+            "ENABLE_NETFLOW": False,
+            "configureStaticDefaultRouteFlag": True,
+            "tag": "12345",
+            "rpAddress": "",
+            "trmBGWMSiteEnabled": False,
+            "nveId": "1",
+            "routeTargetExportEvpn": "",
+            "NETFLOW_MONITOR": "",
+            "bgpPasswordKeyType": "3",
+            "bgpPassword": "",
+            "mtu": "9216",
+            "multicastGroup": "",
+            "routeTargetImportMvpn": "",
+            "isRPAbsent": False,
+            "advertiseHostRouteFlag": False,
+            "vrfVlanName": "",
+            "trmEnabled": False,
+            "loopbackNumber": "",
+            "asn": ASN,
+            "vrfIntfDescription": "",
+            "routeTargetImportEvpn": "",
+            "vrfName": VRF_NAME
+            }
+
+
+        payload = json.dumps({
+            "fabric": VXLAN_FABRIC,
+            "vrfName": VRF_NAME,
+            "vrfTemplate": "Default_VRF_Universal",
+            "vrfExtensionTemplate": "Default_VRF_Extension_Universal",
+            "vrfTemplateConfig": str(vrf_temp_cfg),
+            "tenantName": None,
+            "vrfId": VRF_SEGMENT_ID,
+            "serviceVrfTemplate": None,
+            "source": None,
+            "hierarchicalKey": VXLAN_FABRIC
+        })
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': str(token)
         }
 
+        print("\n-> Creating VRF...")
+        resp = url_ok(url, headers, payload, request_method="POST")
 
-    payload = json.dumps({
-        "fabric": VXLAN_FABRIC,
-        "vrfName": VRF_NAME,
-        "vrfTemplate": "Default_VRF_Universal",
-        "vrfExtensionTemplate": "Default_VRF_Extension_Universal",
-        "vrfTemplateConfig": str(vrf_temp_cfg),
-        "tenantName": None,
-        "vrfId": VRF_SEGMENT_ID,
-        "serviceVrfTemplate": None,
-        "source": None,
-        "hierarchicalKey": VXLAN_FABRIC
-    })
+        check_response_code(resp.status_code, create_vrf.__name__)
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': str(token)
-    }
+        print("-> Success.")
 
-    print("\n-> Creating VRF...")
-    resp = url_ok(url, headers, payload)
-
-    check_response_code(resp.status_code, create_vrf.__name__)
-
-    print("-> Success.")
+    print("\n-> VRF exists. Moving onto next step. ")
 
 
 def attach_vrf_new(token):
@@ -257,11 +256,14 @@ def attach_vrf_new(token):
             }]
 
     payload = json.dumps(attachlist_build)
+
+    # Troubleshoot
     #print(payload)
 
     print("\n-> Attaching VRF...")
-    resp = url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, create_vrf.__name__)
+
     print("-> Success.")
 
 
@@ -279,9 +281,11 @@ def deploy_vrf(token):
     payload = json.dumps({"vrfNames": VRF_NAME})
 
     print("\n-> Deploying VRF...")
-    resp = url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, create_vrf.__name__)
+
     print("-> Success.")
+
 
 # STOP
 def create_network(token):
@@ -440,11 +444,12 @@ def main():
     print("Please wait...")
     time.sleep(4)
 
-    check_vrf_existance(tok)
+# For troubleshooting, call this from within fuction 'create_vrf(tok)
+#    check_vrf_existance(tok)
 
-#    create_vrf(tok)
-#    print("Please wait...")
-#    time.sleep(8)
+    create_vrf(tok)
+    print("Please wait...")
+    time.sleep(8)
 
 #    attach_vrf_new(tok)
 #    print("Please wait...")
