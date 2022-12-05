@@ -79,11 +79,22 @@ def url_ok(uri, head, pay):
 
     return response
 
+def check_response_code(resp_code, whereami):
+    """ Check response code """
 
-def check_validity(resp_text_output):
+    if resp_code != 200:
+        print("Something went wrong, invalid. Please check logs.")
+        logging.debug("Returned response code: %s, function: %s", resp_code, whereami)
+        sys.exit(1)
+
+
+def check_validity(resp_text):
     """ Check if api execution is proper, 'SUCCESS' """
 
-    for item, output in resp_text_output.items():
+    # Troubleshoot
+    #print(resp_code, resp_text)
+
+    for item, output in resp_text.items():
         check_result = output
         if check_result.find("SUCCESS") == -1:
             print("Something went wrong, invalid. Please check logs.")
@@ -116,6 +127,9 @@ def login():
 
 def create_vrf(token):
     """ Create a new VRF. """
+
+    # Add function to check if vrf exists. If so, exit this function.
+    # If doesn't exist, continue
 
     url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
 
@@ -178,10 +192,11 @@ def create_vrf(token):
     }
 
     print("\n-> Creating VRF...")
-    url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload)
+
+    check_response_code(resp.status_code, create_vrf.__name__)
+
     print("-> Success.")
-
-
 
 
 def attach_vrf_new(token):
@@ -222,9 +237,9 @@ def attach_vrf_new(token):
     #print(payload)
 
     print("\n-> Attaching VRF...")
-    url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload)
+    check_response_code(resp.status_code, create_vrf.__name__)
     print("-> Success.")
-
 
 
 def deploy_vrf(token):
@@ -241,12 +256,11 @@ def deploy_vrf(token):
     payload = json.dumps({"vrfNames": VRF_NAME})
 
     print("\n-> Deploying VRF...")
-    url_ok(url, headers, payload)
+    resp = url_ok(url, headers, payload)
+    check_response_code(resp.status_code, create_vrf.__name__)
     print("-> Success.")
 
-
-
-
+# STOP
 def create_network(token):
     """ Create networks. """
 
@@ -403,9 +417,9 @@ def main():
     print("Please wait...")
     time.sleep(4)
 
-#    create_vrf(tok)
-#    print("Please wait...")
-#    time.sleep(8)
+    create_vrf(tok)
+    print("Please wait...")
+    time.sleep(8)
 
 #    attach_vrf_new(tok)
 #    print("Please wait...")
@@ -419,9 +433,9 @@ def main():
 #    print("Please wait...")
 #    time.sleep(8)
 
-    attach_network(tok)
-    print("Please wait...")
-    time.sleep(10)
+#    attach_network(tok)
+#    print("Please wait...")
+#    time.sleep(10)
 
 #    deploy_network(tok)
 #    print("Please wait...")
