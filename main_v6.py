@@ -1,7 +1,12 @@
 """ This program executes NDFC APIs to configure: VRFs, networks and deployment """
 
-# to view doc stings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
-# Nest step: add in request method GET or POST etc... to 'def url_ok'
+# This version has more thorough error checking (though could be better),
+# logging and references the data in an external module called "data/dbcontent".
+# In this configuration it would allow you to reference external data sources like a .csv file.
+# Formatting requirements are laid out in the dbcontent.py file.
+
+# To view DocStrings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
+
 
 import json
 import time
@@ -243,6 +248,8 @@ def attach_vrf_new(token):
 
     lan_attach_list = []
 
+    # This will reference the external master data from: ./data/dbcontent
+    # for the device and serial number, and extract the serial number.
     for serial in dev_serial_result.values():
         attachment_template = {
             "fabric": VXLAN_FABRIC,
@@ -372,6 +379,12 @@ def attach_network(token):
 
     vrf_lan_attach_list = []
 
+    # This will reference the external master data from: ./data/dbcontent
+    # for the serial number and switchports to be deployed. It cross references
+    # two dictionaries: device_name/serial_num and serial_num/switchports - serial_num is the key.
+    # In its current implmentation, all that really is needed is the serial_num/switcports dict,
+    # however, I started on this path and didn't want to redo. The upside, is that if we ever
+    # need to reference the device name, we should be good to do.
     for serial in dev_serial_result.values():
         if serial in serial_swports_result.keys():
             lan_attachment_template = {

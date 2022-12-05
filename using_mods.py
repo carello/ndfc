@@ -1,5 +1,7 @@
 
-# This is working without __init__.py
+# This document is a quick 'how to' import and reference modules in my python code.
+
+#  This is working without __init__.py
 # Let's try __init__.py
 
 # Can do this either way. The second option has more control 'from data.data import hello'
@@ -23,7 +25,7 @@ data.display_serial_switchports(ser_swports)
 '''
 
 #OPTION B (very restrictive but probably safer)
-from data.data import hello, display_master_list, master_list, \
+from data.dbcontent import hello, display_master_list, master_list, \
     serial_switchports, display_serial_switchports
 
 hello()
