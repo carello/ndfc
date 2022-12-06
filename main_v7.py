@@ -1,10 +1,10 @@
 """ This program executes NDFC APIs to configure: VRFs, networks and deployment """
 
-# This version has more thorough error checking (though could be better),
-# logging and references the data in an external module called "data/dbcontent".
+# This version has more thorough error checking, (could be better),
+# logging, and references the data in an external module called "data/dbcontent".
 # In this configuration it would allow you to reference external data sources like a .csv file.
 # Formatting requirements are laid out in the dbcontent.py file.
-
+#
 # To view DocStrings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
 
 
@@ -13,30 +13,46 @@ import time
 import sys
 import os
 import logging
+from functools import wraps
 import requests
 import urllib3
+
 from data import dbcontent
 
 urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
-# Set up switches. Perhaps do ARGSPARSE in future
+# Set up switches. Perhaps implement ARGPARSE in future
 LOGGING_STATUS = True
 
 logging.basicConfig(filename='ndfc.log', format="%(asctime)s - %(message)s",
     encoding='utf-8', level=logging.DEBUG)
 
-# Place a blank line at start of execution
+# Place a blank line in log file at start of execution
 logging.info("\n")
 
 
-##############################
-# *** Set up CONSTANTS ***
-##############################
+####################################################
+#          *** Set up CONSTANTS ***
+# This also could be implemented using a csv file
+####################################################
+
+# Coloring screen output
+BLACK   = "\033[0;30m"
+RED     = "\033[0;31m"
+REDBOLD = "\033[1;31m"
+GREEN   = "\033[0;32m"
+YELLOW  = "\033[0;33m"
+WHITE   = "\033[0;37m"
+NOCOLOR = "\033[0m"
+BOLD    = "\033[1m"
 
 # Enter credentials and server IP
 ND_HOST = "https://10.91.86.229"
+
+# Using environment variables, ARGPARSE could be implemented
 USER = os.environ['USER']
 PASSWORD = os.environ['PASSWORD']
+
 ROOT_API = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/"
 
 # L3 VRF Variables
@@ -56,27 +72,29 @@ L2_NETWORK_NAME = "cpNetwork_30222"
 ####################################
 
 
-#####################################################
-# *** Set up switches and ports ***
-# Deprecate this and use data/dbcontent.py instead
-#####################################################
-#leaf_switch_dict = {
-#    "leaf1": "FDO210518NL",
-#    "leaf2": "FDO20352B5P"
-#    }
-
-# The Value must be a type string without any spaces. e.g "SERIAL_NUM: "Ethernetx/y,Ethernetx/z"
-#switchport_dict = {
-#    "FDO210518NL": "Ethernet1/20",
-#    "FDO20352B5P": "Ethernet1/20,Ethernet1/21"
-#}
 ####################################
+#       *** Functions ***
 ####################################
 
+# Decorator prints out 'please wait for' so user knows something is still happening
+def sleeper_timer_dec(secs):
+    """ Sleeper timer """
 
-####################################
-# *** Functions ***
-####################################
+    def waiting_print_dec(func):
+        """ Simple decorator for print statement """
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            # Place holder for before decoracted function
+            inner_output = func(*args, **kwargs)
+            # This will print after decorated function
+            print(f"{YELLOW}Please wait while I run my tasks...{NOCOLOR}")
+            time.sleep(secs)
+            return inner_output
+        return wrapped
+    return waiting_print_dec
+
+
 def url_ok(uri, head, pay, request_method):
     """ Validate URL availability """
 
@@ -86,7 +104,7 @@ def url_ok(uri, head, pay, request_method):
         response.raise_for_status()
 
     except requests.exceptions.RequestException as err:
-        print("Request Exception found, please see logs. Exiting program...")
+        print(f"{REDBOLD}Request Exception found, please see logs. Exiting program...{NOCOLOR}")
         if LOGGING_STATUS:
             logging.debug(err)
         sys.exit(1)
@@ -104,7 +122,7 @@ def check_response_code(resp_code, whereami):
     #print(f"YY in 'check_responde_code'- {resp_code}")
 
     if resp_code != 200:
-        print("YY-Something went wrong, invalid. Please check logs.")
+        print(f"{REDBOLD}Something went wrong, invalid. Please check logs.{NOCOLOR}")
         if LOGGING_STATUS:
             logging.debug("Returned response code: %s from calling function: %s", resp_code, whereami)
         sys.exit(1)
@@ -116,13 +134,14 @@ def check_validity(resp_text):
     for item, output in resp_text.items():
         check_result = output
         if check_result.find("SUCCESS") == -1:
-            print("Something went wrong, invalid. Please check logs.")
+            print(f"{REDBOLD}Something went wrong, invalid. Please check logs.{NOCOLOR}")
             if LOGGING_STATUS:
                 out = item, output
                 logging.debug(out)
             sys.exit(1)
 
 
+@sleeper_timer_dec(secs=4)
 def login():
     """ Login into ND and return a token. """
 
@@ -145,6 +164,7 @@ def login():
 
     return data
 
+
 def check_vrf_network_existance(vrf_net, token):
     """ Check if VRF or Network exists """
 
@@ -155,22 +175,22 @@ def check_vrf_network_existance(vrf_net, token):
 
     payload = {}
     print()
-    # This won't work because if code isn't 200, it exits program.
-    # We want to only validate code and continue.
-    #resp = url_ok(vrf_net, headers, payload, request_method="GET")
 
-    # So in this case, we'll need to send this instead. Rudimentary, could use more error checking.
+    # We only want to validate that the status_code is 200 and continue.
+    # So using the following function won't work:
+    #     resp = url_ok(vrf_net, headers, payload, request_method="GET")
+    # So in this case, we'll need to call directly instead.
+    # Rudimentary, could use more error checking.
     resp = requests.request("GET", vrf_net, headers=headers, data=payload, verify=False, timeout=4)
 
     return resp.status_code
 
-
+@sleeper_timer_dec(secs=8)
 def create_vrf(token):
     """ Create a new VRF. """
 
     # Check if vrf exists. If so, exit this function, else continue
     vrf = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
-
 
     resp_vrf_existance = check_vrf_network_existance(vrf, token)
 
@@ -219,7 +239,6 @@ def create_vrf(token):
             "vrfName": VRF_NAME
             }
 
-
         payload = json.dumps({
             "fabric": VXLAN_FABRIC,
             "vrfName": VRF_NAME,
@@ -245,6 +264,7 @@ def create_vrf(token):
         print("-> Success.")
 
 
+@sleeper_timer_dec(secs=10)
 def attach_vrf_new(token):
     """ Creating iteration of switch dictionary """
 
@@ -290,6 +310,7 @@ def attach_vrf_new(token):
     print("-> Success.")
 
 
+@sleeper_timer_dec(secs=15)
 def deploy_vrf(token):
     """ Deploy VRF. """
 
@@ -309,6 +330,7 @@ def deploy_vrf(token):
     print("-> Success.")
 
 
+@sleeper_timer_dec(secs=8)
 def create_network(token):
     """ Create networks. """
 
@@ -375,6 +397,7 @@ def create_network(token):
         print("-> Success.")
 
 
+@sleeper_timer_dec(secs=10)
 def attach_network(token):
     """ Attach network to switches and assing access ports. """
 
@@ -393,10 +416,11 @@ def attach_network(token):
 
     # This will reference the external master data from: ./data/dbcontent
     # for the serial number and switchports to be deployed. It cross references
-    # two dictionaries: device_name/serial_num and serial_num/switchports - serial_num is the key.
-    # In its current implmentation, all that really is needed is the serial_num/switcports dict,
-    # however, I started on this path and didn't want to redo. The upside, is that if we ever
-    # need to reference the device name, we should be good to do.
+    # two dictionaries: 'device_name/serial_num' and 'serial_num/switchports',
+    # serial_num is the key. In its current implmentation, all that really is
+    # needed is the serial_num/switcports dict - however, I started on this path
+    # and didn't want to redo. The upside, is that if we ever need to reference
+    # the device name, we should be good to do.
     for serial in dev_serial_result.values():
         if serial in serial_swports_result.keys():
             lan_attachment_template = {
@@ -433,6 +457,7 @@ def attach_network(token):
     print("-> Success.")
 
 
+@sleeper_timer_dec(secs=15)
 def deploy_network(token):
     """ Deploy the networks. """
 
@@ -455,6 +480,7 @@ def deploy_network(token):
 ####################################
 ####################################
 
+
 ####################################
 # *** Executing Program ***
 ####################################
@@ -462,37 +488,20 @@ def main():
     """ Main section to run functions. """
 
     tok = login()
-    print("Please wait...")
-    time.sleep(4)
-
-# For troubleshooting, call this from within fuction 'create_vrf(tok)
-#    check_vrf_existance(tok)
 
     create_vrf(tok)
-    print("Please wait...")
-    time.sleep(8)
 
     attach_vrf_new(tok)
-    print("Please wait...")
-    time.sleep(10)
 
     deploy_vrf(tok)
-    print("Please wait...")
-    time.sleep(15)
 
     create_network(tok)
-    print("Please wait...")
-    time.sleep(8)
 
     attach_network(tok)
-    print("Please wait...")
-    time.sleep(10)
 
     deploy_network(tok)
-    print("Please wait...")
-    time.sleep(15)
 
 
 if __name__ == '__main__':
     main()
-    print("\nProgram Completed!")
+    print(f"\n{BOLD}Program Completed!{NOCOLOR}")

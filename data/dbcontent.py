@@ -6,11 +6,11 @@
 # For reference
 # "ev-leaf1": "FDO210518NL"
 # "ev-leaf2": "FDO20352B5P"
-#    
+   
 
 master_list = [
-["leaf1", "FDO210518NL", "Ethernet1/21"],
-["leaf2", "FDO20352B5P", ""]
+["ev-leaf1", "FDO210518NL", "Ethernet1/18"],
+["ev-leaf2", "FDO20352B5P", ""]
 ]
 
 # Iterate over 'serial_switchports', extract Serial number and ports into a dictionary
@@ -51,7 +51,6 @@ def display_dev_ser(display):
         print(f"Device: {serial} \t Serial: {ports}")
 
 
-
 # Display Master List
 def display_master_list(display):
     """ Display master list """
@@ -74,19 +73,3 @@ if __name__ == '__main__':
     display_serial_switchports(ser_swports)
     print()
     display_master_list(master_list)
-
-
-
-
-
-# *** Misc stuff for testing, delete eventually ***
-###################################################
-#mylist2 = ["leaf1", "AAAAAAAA", "Ethernet1/1"]
-##print(mylist2[1])
-#for i in mylist2:
-#    #print(mylist2[0])
-#    mydict[mylist2[1]] = mylist2[2]
-
-# Print out just switchports
-#for ports in serial_switchports.values():
-#    print("\n", ports)
