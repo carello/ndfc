@@ -557,10 +557,9 @@ def checking_state(token):
         print("-> Network has been deployed.")
 
     print("\n-> Re-verifing fabric state...")
-    time.sleep(10)
+    time.sleep(15)
     state = get_deployment_state(token)
-    time.sleep(10)
-
+ 
     # Troubleshooting
     #state = "MOCK ME"
 
