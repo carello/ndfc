@@ -456,7 +456,7 @@ def attach_network(token):
 
     print("-> Success.")
 
-
+# Deploy the network after a recalculation
 @sleeper_timer_dec(secs=15)
 def deploy_network(token):
     """ Deploy the networks. """
@@ -489,9 +489,10 @@ def deploy(token):
     }
     payload = json.dumps({})
 
-    print("\n-> Deploying config...")
+    print("-> Deploying config...")
     resp = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=20)
-    time.sleep(15)
+    check_response_code(resp.status_code, deploy.__name__)
+    time.sleep(10)
 
     if resp.status_code == 200:
         print("-> Deployment complete.")
@@ -511,19 +512,18 @@ def recal_save(token):
     }
     payload = json.dumps({})
 
-    print("\n-> Recalculating and saving config...")
+    print("-> Recalculating and saving config...")
     resp = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=20)
-    time.sleep(15)
+    #check_response_code(resp.status_code, recal_save.__name__)
+    time.sleep(10)
     if resp.status_code != 200:
-        raise Exception("ERROR has occurred")
+        raise Exception(f"{REDBOLD}ERROR has occurred, check logs.{NOCOLOR}")
 
-    time.sleep(5)
     deploy(token)
 
 
-# Check the state of the deployment eg. 'PENDING' or 'DEPLOYED" or 'NA'
-def checking_state(token):
-    """ Check state of deployment """
+def get_deployment_state(token):
+    """ Get deployment status """
 
     url = f"{ROOT_API}{VXLAN_FABRIC}/networks/{L2_NETWORK_NAME}/status"
     headers = {
@@ -532,22 +532,45 @@ def checking_state(token):
     }
     payload = json.dumps({})
 
-    print("\n-> Checking state of the Network...")
+    print("\n-> Getting fabric status.")
     resp = url_ok(url, headers, payload, request_method="GET")
-    check_response_code(resp.status_code, deploy_network.__name__)
 
     json_data = json.loads(resp.text)
     status_result = json_data["networkStatus"]
     print(f"-> Network status: {status_result}")
 
-    if status_result == "PENDING":
+    return status_result
+
+
+# Check the state of the deployment eg. 'PENDING' or 'DEPLOYED" or 'NA'
+def checking_state(token):
+    """ Check state of deployment """
+
+    state = get_deployment_state(token)
+
+    #print(f"STATE: {state}")
+
+    if state == "PENDING":
         recal_save(token)
 
-    elif status_result == "DEPLOYED":
+    if state == "DEPLOYED":
         print("-> Network has been deployed.")
 
-    else:
-        raise Exception("ERROR has occured. check logs...")
+    print("\n-> Re-verifing fabric state...")
+    time.sleep(10)
+    state = get_deployment_state(token)
+    time.sleep(10)
+
+    # Troubleshooting
+    #state = "MOCK ME"
+
+    #if state != "PENDING" and state != "DEPLOYED":
+    if state not in ("PENDING", "DEPLOYED"):
+        print(state)
+        print("-> Fabric not in steady state")
+        print(f"{REDBOLD}-> Please check NDFC. Exiting...{NOCOLOR}")
+        sys.exit(1)
+
 
 ####################################
 ####################################
@@ -574,17 +597,6 @@ def main():
     deploy_network(tok)
 
     checking_state(tok)
-
-
-    # Need to add "deploy config" POST, with empty payload {} after an update.
-    # This is needed if you attach interfaces that have already been attached.
-    # NDFC puts those in pending state...
-    # Check state if pending:
-    #/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/Demo1/networks/{network-name}/status
-    # Recal and save config
-    #/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/control/fabrics/Demo1/config-save
-    # Deploy
-    #/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/control/fabrics/Demo1/config-deploy
 
 
 if __name__ == '__main__':

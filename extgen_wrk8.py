@@ -256,8 +256,7 @@ def check_vrf_network_existanceX(dst_uri):
     #print(f"HERE 7, {TOKEN}")
     """ Check if VRF or Network exists """
     # -> Can do something here...
-    #    This is what was being called in 'create_vrf'
-    #    resp_vrf_existance = check_vrf_network_existanceX(f"/vrfs/{VRF_NAME}", token)
+
     def dec_wrapper(func):
         @wraps(func)
         def wrapped(kw1=None, kw2=None):
@@ -586,7 +585,7 @@ def deploy_network(token):
 
 
 ####################################
-# *** Executing Program ***
+#    *** Executing Program ***
 ####################################
 def main():
     """ Main section to run functions. """
