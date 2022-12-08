@@ -569,30 +569,6 @@ def checking_state(token):
             count = 0
 
 
-    ''''
-    #print(f"STATE: {state}")
-
-    if state == "PENDING":
-        recal_save(token)
-
-    if state == "DEPLOYED":
-        print("-> Network has been deployed.")
-
-    print("\n-> Re-verifing fabric state...")
-    time.sleep(15)
-    state = get_deployment_state(token)
- 
-    # Troubleshooting
-    #state = "MOCK ME"
-
-    #if state != "PENDING" and state != "DEPLOYED":
-    if state not in ("PENDING", "DEPLOYED"):
-        print(state)
-        print("-> Fabric not in steady state")
-        print(f"{REDBOLD}-> Please check NDFC. Exiting...{NOCOLOR}")
-        sys.exit(1)
-    '''
-
 ####################################
 ####################################
 
@@ -613,9 +589,9 @@ def main():
 
 #    create_network(tok)
 
-    attach_network(tok)
+#    attach_network(tok)
 
-    deploy_network(tok)
+#    deploy_network(tok)
 
     checking_state(tok)
 
