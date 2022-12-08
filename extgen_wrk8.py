@@ -4,7 +4,7 @@
 # logging, and references the data in an external module called "data/dbcontent".
 # In this configuration it would allow you to reference external data sources like a .csv file.
 # Formatting requirements are laid out in the dbcontent.py file.
-# Timers are very conservative, it could be tuned to shorten wait time...
+#
 # To view DocStrings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
 
 
@@ -46,6 +46,7 @@ WHITE   = "\033[0;37m"
 NOCOLOR = "\033[0m"
 BOLD    = "\033[1m"
 
+#TOKEN = None
 # Enter credentials and server IP
 ND_HOST = "https://10.91.86.229"
 
@@ -79,13 +80,16 @@ L2_NETWORK_NAME = "cpNetwork_30222"
 # Decorator prints out 'please wait for' so user knows something is still happening
 def sleeper_timer_dec(secs):
     """ Sleeper timer """
-
+    # -> Can do something here...
     def waiting_print_dec(func):
         """ Simple decorator for print statement """
-
+        # -> Can do something here too...
         @wraps(func)
         def wrapped(*args, **kwargs):
             # Place holder for before decoracted function
+            # -> Can do something here also...
+
+            # Start of inner capabilities
             inner_output = func(*args, **kwargs)
             # This will print after decorated function
             print(f"{YELLOW}Please wait while I run my tasks...{NOCOLOR}")
@@ -95,11 +99,43 @@ def sleeper_timer_dec(secs):
     return waiting_print_dec
 
 
+# Test Decorator
+def say_hello_dec(hi_ho):
+    """ Say hello """
+    @wraps(hi_ho)
+    def wrapped(*args, **kwargs):
+        # Place holder for before decoracted function
+        print("TEST Dec: Say HELLO...")
+        # Start of inner capabilities
+        inner_output = hi_ho(*args, **kwargs)
+        # This will print after decorated function
+        return inner_output
+    return wrapped
+
+
+# Experimenting using an external url generator to abstract from functions.
+# I don't think this is adding value
+def url_generator(dst_url, token):
+    """ Generate URL and headers """
+
+    url_header_dict = []
+    dst_url_result = f"{ROOT_API}{VXLAN_FABRIC}{dst_url}"
+
+    headers = {
+            'Content-Type': 'application/json',
+            'Authorization': str(token)
+        }
+
+    url_header_dict = [dst_url_result, headers]
+
+    return url_header_dict
+
+
 def url_ok(uri, head, pay, request_method):
     """ Validate URL availability """
 
     try:
-        print("-> Checking URL request...")
+        print("-> XYZ Checking URL request...")
         response = requests.request(request_method, uri, headers=head, data=pay, verify=False, timeout=4)
         response.raise_for_status()
 
@@ -146,59 +182,132 @@ def login():
     """ Login into ND and return a token. """
 
     url = f"{ND_HOST}/login"
-
     payload = json.dumps({
         "userName": USER,
         "userPasswd": PASSWORD,
         "domain": "local"
     })
     headers = {'Content-Type': 'application/json'}
-
     print("\n-> Logging into Nexus Dashboard...")
     resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, whereami=login.__name__)
-
     print("-> Success.")
-
     data = json.loads(resp.text)['token']
 
     return data
 
-
+# This is broken for the network verification. Working for VRF test
 def check_vrf_network_existance(vrf_net, token):
     """ Check if VRF or Network exists """
 
+    # Corrected this: drop /vrfs/ and include it in the vrf_net variable when you send it.
+    vrf_uri = f"{ROOT_API}{VXLAN_FABRIC}{vrf_net}"
     headers = {
         'Content-Type': 'application/json',
         'Authorization': str(token)
     }
 
-    payload = json.dumps({})
-    print()
+    payload = {}
 
     # We only want to validate that the status_code is 200 and continue.
     # So using the following function won't work:
     #     resp = url_ok(vrf_net, headers, payload, request_method="GET")
     # So in this case, we'll need to call directly instead.
     # Rudimentary, could use more error checking.
-    resp = requests.request("GET", vrf_net, headers=headers, data=payload, verify=False, timeout=4)
+    resp = requests.request("GET", vrf_uri, headers=headers, data=payload, verify=False, timeout=4)
 
+    print()
     return resp.status_code
 
+'''
+# ***  BETA #1 version of using this as a decorator ***
+def check_vrf_network_existanceX(dst_uri, TOKEN):
+    print(f"HERE 7, {TOKEN}")
+    """ Check if VRF or Network exists """
+    # -> Can do something here...
+    #    This is what was being called in 'create_vrf'
+    #    resp_vrf_existance = check_vrf_network_existanceX(f"/vrfs/{VRF_NAME}", token)
+    def dec_wrapper(func):
+        print(f"HERE 8, {TOKEN}")
+        vrf_uri = f"{ROOT_API}{VXLAN_FABRIC}{dst_uri}"
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': str(TOKEN)
+            }
+        payload = {}
+        print("HERE 9")
+        resp = requests.request("GET", vrf_uri, headers=headers, data=payload, verify=False, timeout=4)
+        print(f"HERE 10 {resp}")
+        if resp == 200:
+            print(f"Exiting function: {check_vrf_network_existanceX.__name__}")
+        resp_vrf_existance = resp
+        @wraps(func)
+        def wrapped(kw1=TOKEN, kw2=resp_vrf_existance):
+            print("HERE 11")
+            print(f"kw1: {kw1}. kw2: {kw2}")
+            value = func(kw1, kw2)
+            return value
+        return wrapped
+    return dec_wrapper
+'''
+
+# ***  BETA #2 version of using this as a decorator ***
+def check_vrf_network_existanceX(dst_uri):
+    #print(f"HERE 7, {TOKEN}")
+    """ Check if VRF or Network exists """
+    # -> Can do something here...
+    #    This is what was being called in 'create_vrf'
+    #    resp_vrf_existance = check_vrf_network_existanceX(f"/vrfs/{VRF_NAME}", token)
+    def dec_wrapper(func):
+        @wraps(func)
+        def wrapped(kw1=None, kw2=None):
+            print(f"HERE 8, {kw1}, {kw2}")
+            vrf_uri = f"{ROOT_API}{VXLAN_FABRIC}{dst_uri}"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': str(kw1)
+                }
+            payload = {}
+            #print("HERE 9")
+            resp = requests.request("GET", vrf_uri, headers=headers, data=payload, verify=False, timeout=4)
+            #print(f"HERE 10 {resp}")
+            #if resp.status_code == 200:
+            #    print(f"Exiting function: {check_vrf_network_existanceX.__name__}")
+            #resp_vrf_existance = resp
+            #print("HERE 11")
+            #print(f"kw1: {kw1}. kw2: {resp}")
+            kw2=resp
+            value = func(kw1, kw2)
+            return value
+        return wrapped
+    return dec_wrapper
+
+
+# I'm trying the external url generator on this function.
+@check_vrf_network_existanceX(f'/vrfs/{VRF_NAME}')
 @sleeper_timer_dec(secs=8)
-def create_vrf(token):
+def create_vrf(token, resp_vrf_existance):
     """ Create a new VRF. """
 
     # Check if vrf exists. If so, exit this function, else continue
-    vrf = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
+    #vrf = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
+    #resp_vrf_existance = check_vrf_network_existanceX(f"/vrfs/{VRF_NAME}", token)
 
-    resp_vrf_existance = check_vrf_network_existance(vrf, token)
+    # Troubleshoot
+    #print(f"\nHERES 12, TOK: {token}; CODE: {resp_vrf_existance}\n")
+    #print(type(resp_vrf_existance))
+    #print()
 
-    if resp_vrf_existance == 200:
+    if resp_vrf_existance.status_code == 200:
         print("-> VRF exists. Moving onto next step. ")
 
-    if resp_vrf_existance != 200:
-        url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
+    # Experimenting using an external URL generator...
+    if resp_vrf_existance.status_code != 200:
+        #url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
+        uri_header_result = url_generator("/vrfs", token)
+        #print("HERE 50")
+        url = uri_header_result[0]
+        headers = uri_header_result[1]
 
         vrf_temp_cfg = {
             "advertiseDefaultRouteFlag": True,
@@ -251,11 +360,6 @@ def create_vrf(token):
             "source": None,
             "hierarchicalKey": VXLAN_FABRIC
         })
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': str(token)
-        }
 
         print("\n-> Creating VRF...")
         resp = url_ok(url, headers, payload, request_method="POST")
@@ -335,8 +439,8 @@ def create_network(token):
     """ Create networks. """
 
     # Check if Network exists. If so, exit this function, else continue
-    net = f"{ROOT_API}{VXLAN_FABRIC}/networks/{L2_NETWORK_NAME}"
-    resp_net_existance = check_vrf_network_existance(net, token)
+    #net = f"{ROOT_API}{VXLAN_FABRIC}/networks/{L2_NETWORK_NAME}"
+    resp_net_existance = check_vrf_network_existance(f"/networks/{L2_NETWORK_NAME}", token)
 
     if resp_net_existance == 200:
         print("-> Network exists. Moving onto next steps")
@@ -397,7 +501,7 @@ def create_network(token):
         print("-> Success.")
 
 
-@sleeper_timer_dec(secs=15)
+@sleeper_timer_dec(secs=10)
 def attach_network(token):
     """ Attach network to switches and assing access ports. """
 
@@ -477,78 +581,6 @@ def deploy_network(token):
     print("-> Success.")
 
 
-# Recalculate and save the config
-@sleeper_timer_dec(secs=5)
-def deploy(token):
-    """ Recalculate and save the config """
-
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/control/fabrics/{VXLAN_FABRIC}/config-deploy"
-    headers = {
-        'Authorization': str(token),
-        'Content-Type': 'application/json'
-    }
-    payload = json.dumps({})
-
-    print("\n-> Deploying config...")
-    resp = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=20)
-    time.sleep(15)
-
-    if resp.status_code == 200:
-        print("-> Deployment complete.")
-
-    elif resp.status_code != 200:
-        raise Exception("ERROR has occurred")
-
-
-# Recalculate and save the config
-def recal_save(token):
-    """ Recalculate and save the config """
-
-    url = f"{ND_HOST}/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/control/fabrics/{VXLAN_FABRIC}/config-save"
-    headers = {
-        'Authorization': str(token),
-        'Content-Type': 'application/json'
-    }
-    payload = json.dumps({})
-
-    print("\n-> Recalculating and saving config...")
-    resp = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=20)
-    time.sleep(15)
-    if resp.status_code != 200:
-        raise Exception("ERROR has occurred")
-
-    time.sleep(5)
-    deploy(token)
-
-
-# Check the state of the deployment eg. 'PENDING' or 'DEPLOYED" or 'NA'
-def checking_state(token):
-    """ Check state of deployment """
-
-    url = f"{ROOT_API}{VXLAN_FABRIC}/networks/{L2_NETWORK_NAME}/status"
-    headers = {
-        'Authorization': str(token),
-        'Content-Type': 'application/json'
-    }
-    payload = json.dumps({})
-
-    print("\n-> Checking state of the Network...")
-    resp = url_ok(url, headers, payload, request_method="GET")
-    check_response_code(resp.status_code, deploy_network.__name__)
-
-    json_data = json.loads(resp.text)
-    status_result = json_data["networkStatus"]
-    print(f"-> Network status: {status_result}")
-
-    if status_result == "PENDING":
-        recal_save(token)
-
-    elif status_result == "DEPLOYED":
-        print("-> Network has been deployed.")
-
-    else:
-        raise Exception("ERROR has occured. check logs...")
-
 ####################################
 ####################################
 
@@ -561,7 +593,7 @@ def main():
 
     tok = login()
 
-    create_vrf(tok)
+    create_vrf(tok, "_")
 
     attach_vrf_new(tok)
 
@@ -572,19 +604,6 @@ def main():
     attach_network(tok)
 
     deploy_network(tok)
-
-    checking_state(tok)
-
-
-    # Need to add "deploy config" POST, with empty payload {} after an update.
-    # This is needed if you attach interfaces that have already been attached.
-    # NDFC puts those in pending state...
-    # Check state if pending:
-    #/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/top-down/fabrics/Demo1/networks/{network-name}/status
-    # Recal and save config
-    #/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/control/fabrics/Demo1/config-save
-    # Deploy
-    #/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/control/fabrics/Demo1/config-deploy
 
 
 if __name__ == '__main__':

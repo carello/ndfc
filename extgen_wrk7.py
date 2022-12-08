@@ -46,6 +46,7 @@ WHITE   = "\033[0;37m"
 NOCOLOR = "\033[0m"
 BOLD    = "\033[1m"
 
+#TOKEN = None
 # Enter credentials and server IP
 ND_HOST = "https://10.91.86.229"
 
@@ -79,13 +80,14 @@ L2_NETWORK_NAME = "cpNetwork_30222"
 # Decorator prints out 'please wait for' so user knows something is still happening
 def sleeper_timer_dec(secs):
     """ Sleeper timer """
-
+    # -> Can do something here...
     def waiting_print_dec(func):
         """ Simple decorator for print statement """
-
+        # -> Can do something here too...
         @wraps(func)
         def wrapped(*args, **kwargs):
             # Place holder for before decoracted function
+            # -> Can do something here also...
 
             # Start of inner capabilities
             inner_output = func(*args, **kwargs)
@@ -117,7 +119,7 @@ def url_generator(dst_url, token):
     """ Generate URL and headers """
 
     url_header_dict = []
-    dst_url_result = f"{ROOT_API}{VXLAN_FABRIC}/{dst_url}"
+    dst_url_result = f"{ROOT_API}{VXLAN_FABRIC}{dst_url}"
 
     headers = {
             'Content-Type': 'application/json',
@@ -133,7 +135,7 @@ def url_ok(uri, head, pay, request_method):
     """ Validate URL availability """
 
     try:
-        print("-> Checking URL request...")
+        print("-> XYZ Checking URL request...")
         response = requests.request(request_method, uri, headers=head, data=pay, verify=False, timeout=4)
         response.raise_for_status()
 
@@ -180,29 +182,26 @@ def login():
     """ Login into ND and return a token. """
 
     url = f"{ND_HOST}/login"
-
     payload = json.dumps({
         "userName": USER,
         "userPasswd": PASSWORD,
         "domain": "local"
     })
     headers = {'Content-Type': 'application/json'}
-
     print("\n-> Logging into Nexus Dashboard...")
     resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, whereami=login.__name__)
-
     print("-> Success.")
-
     data = json.loads(resp.text)['token']
 
     return data
 
-
+# This is broken for the network verification. Working for VRF test
 def check_vrf_network_existance(vrf_net, token):
     """ Check if VRF or Network exists """
 
-    vrf_uri = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{vrf_net}"
+    # Corrected this: drop /vrfs/ and include it in the vrf_net variable when you send it.
+    vrf_uri = f"{ROOT_API}{VXLAN_FABRIC}{vrf_net}"
     headers = {
         'Content-Type': 'application/json',
         'Authorization': str(token)
@@ -220,23 +219,95 @@ def check_vrf_network_existance(vrf_net, token):
     print()
     return resp.status_code
 
+'''
+# ***  BETA #1 version of using this as a decorator ***
+def check_vrf_network_existanceX(dst_uri, TOKEN):
+    print(f"HERE 7, {TOKEN}")
+    """ Check if VRF or Network exists """
+    # -> Can do something here...
+    #    This is what was being called in 'create_vrf'
+    #    resp_vrf_existance = check_vrf_network_existanceX(f"/vrfs/{VRF_NAME}", token)
+    def dec_wrapper(func):
+        print(f"HERE 8, {TOKEN}")
+        vrf_uri = f"{ROOT_API}{VXLAN_FABRIC}{dst_uri}"
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': str(TOKEN)
+            }
+        payload = {}
+        print("HERE 9")
+        resp = requests.request("GET", vrf_uri, headers=headers, data=payload, verify=False, timeout=4)
+        print(f"HERE 10 {resp}")
+        if resp == 200:
+            print(f"Exiting function: {check_vrf_network_existanceX.__name__}")
+        resp_vrf_existance = resp
+        @wraps(func)
+        def wrapped(kw1=TOKEN, kw2=resp_vrf_existance):
+            print("HERE 11")
+            print(f"kw1: {kw1}. kw2: {kw2}")
+            value = func(kw1, kw2)
+            return value
+        return wrapped
+    return dec_wrapper
+'''
+
+# ***  BETA #2 version of using this as a decorator ***
+def check_vrf_network_existanceX(dst_uri):
+    #print(f"HERE 7, {TOKEN}")
+    """ Check if VRF or Network exists """
+    # -> Can do something here...
+    #    This is what was being called in 'create_vrf'
+    #    resp_vrf_existance = check_vrf_network_existanceX(f"/vrfs/{VRF_NAME}", token)
+    def dec_wrapper(func):
+        @wraps(func)
+        def wrapped(kw1=None, kw2=None):
+            print(f"HERE 8, {kw1}, {kw2}")
+            vrf_uri = f"{ROOT_API}{VXLAN_FABRIC}{dst_uri}"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': str(kw1)
+                }
+            payload = {}
+            #print("HERE 9")
+            resp = requests.request("GET", vrf_uri, headers=headers, data=payload, verify=False, timeout=4)
+            #print(f"HERE 10 {resp}")
+            #if resp.status_code == 200:
+            #    print(f"Exiting function: {check_vrf_network_existanceX.__name__}")
+            #resp_vrf_existance = resp
+            #print("HERE 11")
+            #print(f"kw1: {kw1}. kw2: {resp}")
+            kw2=resp
+            value = func(kw1, kw2)
+            return value
+        return wrapped
+    return dec_wrapper
+
 
 # I'm trying the external url generator on this function.
+@check_vrf_network_existanceX(f'/vrfs/{VRF_NAME}')
 @sleeper_timer_dec(secs=8)
-def create_vrf(token):
+def create_vrf(token, resp_vrf_existance):
     """ Create a new VRF. """
 
     # Check if vrf exists. If so, exit this function, else continue
     #vrf = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
-    resp_vrf_existance = check_vrf_network_existance(VRF_NAME, token)
+    #resp_vrf_existance = check_vrf_network_existanceX(f"/vrfs/{VRF_NAME}", token)
 
-    if resp_vrf_existance == 200:
+    # Troubleshoot
+    #print(f"\nHERES 12, TOK: {token}; CODE: {resp_vrf_existance}\n")
+    #print(type(resp_vrf_existance))
+    #print()
+
+    if resp_vrf_existance.status_code == 200:
         print("-> VRF exists. Moving onto next step. ")
 
     # Experimenting using an external URL generator...
-    if resp_vrf_existance != 200:
+    if resp_vrf_existance.status_code != 200:
         #url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
-        uri_header_result = url_generator("vrfs", token)
+        uri_header_result = url_generator("/vrfs", token)
+        #print("HERE 50")
+        url = uri_header_result[0]
+        headers = uri_header_result[1]
 
         vrf_temp_cfg = {
             "advertiseDefaultRouteFlag": True,
@@ -289,9 +360,6 @@ def create_vrf(token):
             "source": None,
             "hierarchicalKey": VXLAN_FABRIC
         })
-
-        url = uri_header_result[0]
-        headers = uri_header_result[1]
 
         print("\n-> Creating VRF...")
         resp = url_ok(url, headers, payload, request_method="POST")
@@ -371,8 +439,8 @@ def create_network(token):
     """ Create networks. """
 
     # Check if Network exists. If so, exit this function, else continue
-    net = f"{ROOT_API}{VXLAN_FABRIC}/networks/{L2_NETWORK_NAME}"
-    resp_net_existance = check_vrf_network_existance(net, token)
+    #net = f"{ROOT_API}{VXLAN_FABRIC}/networks/{L2_NETWORK_NAME}"
+    resp_net_existance = check_vrf_network_existance(f"/networks/{L2_NETWORK_NAME}", token)
 
     if resp_net_existance == 200:
         print("-> Network exists. Moving onto next steps")
@@ -525,7 +593,7 @@ def main():
 
     tok = login()
 
-    create_vrf(tok)
+    create_vrf(tok, "_")
 
     attach_vrf_new(tok)
 
