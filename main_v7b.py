@@ -22,7 +22,7 @@ from data import dbcontent
 urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
 # Set up switches. Perhaps implement ARGPARSE in future
-LOGGING_STATUS = True
+LOGGING_STATUS = False
 
 logging.basicConfig(filename='ndfc.log', format="%(asctime)s - %(message)s",
     encoding='utf-8', level=logging.DEBUG)
@@ -581,17 +581,17 @@ def main():
 
     tok = login()
 
-#    create_vrf(tok)
+    create_vrf(tok)
 
-#    attach_vrf_new(tok)
+    attach_vrf_new(tok)
 
-#    deploy_vrf(tok)
+    deploy_vrf(tok)
 
-#    create_network(tok)
+    create_network(tok)
 
-#    attach_network(tok)
+    attach_network(tok)
 
-#    deploy_network(tok)
+    deploy_network(tok)
 
     checking_state(tok)
 
