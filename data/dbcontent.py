@@ -10,7 +10,7 @@
 
 # Enter your switch serial numbers and ethernet ports. The name is optional at this time
 master_list = [
-["leaf1", "FDO210518NL", "Ethernet1/21"],
+["leaf1", "FDO210518NL", "Ethernet1/21,Ethernet1/30"],
 ["leaf2", "FDO20352B5P", ""]
 ]
 

@@ -19,7 +19,7 @@ Create environmental variables for your APIC username and password. In a termina
 To configure ethernet switchports you'll need to enter those in the file located in ./data/content.py. In this script, there's a section at line 11 called "master_list". Enter in your serial numbers and desired ethernet switchports you'd like to configure. For example:
 
 	master_list = [
-	["leaf1", "FDO210518NL", "Ethernet1/21"],
+	["leaf1", "FDO210518NL", "Ethernet1/21,Ethernet1/30"],
 	["leaf2", "FDO20352B5P", ""]
 	]
 	
