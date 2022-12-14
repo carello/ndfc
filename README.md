@@ -23,6 +23,10 @@ To configure ethernet switchports you'll need to enter those in the file located
 	["leaf2", "FDO20352B5P", ""]
 	]
 	
+	Note: There are no whitespaces between the EthernetX/Y switchports
+	in the list, just a comma. If a switch dosen't have a switchport
+	configuration, double quoted comments are needed.
+	
 You can enter in a switch names too. However, at this time, the name isn't being used.
 
 As far as Python3 is concerned, you'll need the `requests library` and I suggest you run in a `virtualenv`.
