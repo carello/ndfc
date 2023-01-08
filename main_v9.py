@@ -1,9 +1,15 @@
 """ This program executes NDFC APIs to configure: VRFs, networks and deployment """
 
+__version__ = "0.8"
+
+# main_v8.py
+#
+# This version, uses data from ./data/dbcontent2.py which has a different dictionary structure.
+#
 # This version has more thorough error checking, (could be better),
-# logging, and references the data in an external module called "data/dbcontent".
+# logging, and references the data in an external module called "data/dbcontent2".
 # In this configuration it would allow you to reference external data sources like a .csv file.
-# Formatting requirements are laid out in the dbcontent.py file.
+# Formatting requirements are laid out in the dbcontent2.py file.
 # Timers are very conservative, it could be tuned to shorten wait time...
 #
 # To view DocStrings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
@@ -18,7 +24,7 @@ from functools import wraps
 import requests
 import urllib3
 
-from data import dbcontent
+from data import dbcontent2
 
 urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
@@ -79,6 +85,17 @@ L2_VLAN_ID = "2322"
 #       *** Functions ***
 ####################################
 
+
+# progress bar animation
+def animation_dot(sec):
+    """Progress bar animation."""
+    print(f"{YELLOW}Please wait while I run my tasks", end="")
+    for _ in range(sec):
+        time.sleep(1)
+        print('.', end="", flush=True)
+    print(f"{NOCOLOR}")
+
+
 # Decorator prints out 'please wait for' so user knows something is still happening
 def sleeper_timer_dec(secs):
     """ Sleeper Decorator """
@@ -92,8 +109,12 @@ def sleeper_timer_dec(secs):
 
             inner_output = func(*args, **kwargs)
             # This will print after decorated function
-            print(f"{YELLOW}Please wait while I run my tasks...{NOCOLOR}")
-            time.sleep(secs)
+            #print(f"{YELLOW}Please wait while I run my tasks", end="")
+            # for _ in range(secs):
+            #     time.sleep(1)
+            #     print('.', end="", flush=True)
+            animation_dot(secs)
+            #print(f"{NOCOLOR}")
             return inner_output
         return wrapped
     return waiting_print_dec
@@ -119,12 +140,12 @@ def url_ok(uri, head, pay, request_method):
     """ Validate URL availability """
 
     try:
-        #print("-> Checking URL request...")
+        #print("-> Checking URL request.")
         response = requests.request(request_method, uri, headers=head, data=pay, verify=False, timeout=30)
         response.raise_for_status()
 
     except requests.exceptions.RequestException as err:
-        print(f"{REDBOLD}Request Exception found, please see logs. Exiting program...{NOCOLOR}")
+        print(f"{REDBOLD}Request Exception found, please see logs. Exiting program.{NOCOLOR}")
         if LOGGING_STATUS:
             logging.debug(err)
         sys.exit(1)
@@ -137,7 +158,9 @@ def url_ok(uri, head, pay, request_method):
 
 @logging_dec()
 def check_response_code(resp_code, whereami):
-    """ Check response code """
+    """
+    Check response code
+    """
 
     # Troubleshooting
     #print(f"whereami... source = {whereami}; checkpoint = {check_response_code.__name__}")
@@ -165,7 +188,19 @@ def check_validity(resp_text, whereami):
 @logging_dec()
 @sleeper_timer_dec(secs=4)
 def login():
-    """ Login into ND and return a token. """
+    """
+    Login into ND and return a token. Status code returned should be 200
+    >>> url = f"{ND_HOST}/login"
+    >>> headers = {'Content-Type': 'application/json'}
+    >>> payload = json.dumps({
+    ...        "userName": USER,
+    ...        "userPasswd": PASSWORD,
+    ...        "domain": "local"
+    ...        })
+    >>> resp = url_ok(url, headers, payload, request_method="POST")
+    >>> resp.status_code
+    200
+    """
 
     url = f"{ND_HOST}/login"
     headers = {'Content-Type': 'application/json'}
@@ -175,7 +210,7 @@ def login():
         "domain": "local"
     })
 
-    print("\n-> Logging into Nexus Dashboard...")
+    print("\n-> Logging into Nexus Dashboard.")
     resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, login.__name__)
 
@@ -210,7 +245,9 @@ def check_vrf_network_existance(vrf_net, token):
 @logging_dec()
 @sleeper_timer_dec(secs=8)
 def create_vrf(token):
-    """ Create a new VRF. """
+    """
+    Create a new VRF.
+    """
 
     # Check if vrf exists. If so, exit this function, else continue
     vrf = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
@@ -223,7 +260,7 @@ def create_vrf(token):
     resp_vrf_existance = check_vrf_network_existance(vrf, token)
 
     if resp_vrf_existance == 200:
-        print("-> VRF exists. Moving onto next step. ")
+        print("-> VRF exists. Moving onto next steps. ")
 
     if resp_vrf_existance != 200:
         url = f"{ROOT_API}{VXLAN_FABRIC}/vrfs"
@@ -280,7 +317,7 @@ def create_vrf(token):
             "hierarchicalKey": VXLAN_FABRIC
         })
 
-        print("\n-> Creating VRF...")
+        print("\n-> Creating VRF.")
         resp = url_ok(url, headers, payload, request_method="POST")
         check_response_code(resp.status_code, create_vrf.__name__)
 
@@ -299,14 +336,21 @@ def attach_vrf_new(token):
         'Content-Type': 'application/json'
     }
 
-    # Get device and serial dictionary from data/dbcontent.py
-    dev_serial_result = dbcontent.dev_serial(dbcontent.master_list)
+    # Get serial and switchport dictionary from data/dbcontent2.py
+    serial_switchports_result = dbcontent2.serial_switchports(dbcontent2.master_list)
+
+    #TEST/DEBUGGING
+    #print(f"\n{serial_switchports_result}\n")
+    #for serial in serial_switchports_result:
+    #    print(serial)
+    #print("\nExiting testing...")
+    #sys.exit(1)
 
     lan_attach_list = []
 
-    # This will reference the external master data from: ./data/dbcontent
-    # for the device and serial number, and extract the serial number.
-    for serial in dev_serial_result.values():
+    # This will reference the external master data from: ./data/dbcontent2
+    # and extract the serial number.
+    for serial in serial_switchports_result:
         attachment_template = {
             "fabric": VXLAN_FABRIC,
             "vrfName": VRF_NAME,
@@ -327,7 +371,7 @@ def attach_vrf_new(token):
 
     payload = json.dumps(attachlist_build)
 
-    print("\n-> Attaching VRF...")
+    print("\n-> Attaching VRF.")
     resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, attach_vrf_new.__name__)
 
@@ -347,7 +391,7 @@ def deploy_vrf(token):
 
     payload = json.dumps({"vrfNames": VRF_NAME})
 
-    print("\n-> Deploying VRF...")
+    print("\n-> Deploying VRF.")
     resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, deploy_vrf.__name__)
 
@@ -415,7 +459,7 @@ def create_network(token):
             "hierarchicalKey": None
         })
 
-        print("\n-> Creating Network...")
+        print("-> Creating Network.")
         resp = url_ok(url, headers, payload, request_method="POST")
         check_response_code(resp.status_code, create_network.__name__)
 
@@ -433,39 +477,41 @@ def attach_network(token):
         'Content-Type': 'application/json'
     }
 
-    # Dictionary of device name and serial number
-    dev_serial_result = dbcontent.dev_serial(dbcontent.master_list)
-
     # Dictionary of serial number and switchports
-    serial_swports_result = dbcontent.serial_switchports(dbcontent.master_list)
+    serial_swports_result = dbcontent2.serial_switchports(dbcontent2.master_list)
+
+    #TEST/DEBUGGING
+    # print(f"\n{serial_swports_result}\n")
+    # for serial, switchports in serial_swports_result.items():
+    #     print(serial, switchports)
+    # print("\nExiting testing...")
 
     vrf_lan_attach_list = []
 
-    # This will reference the external master data from: ./data/dbcontent
+    # This will reference the external master data from: ./data/dbcontent2
     # for the serial number and switchports to be deployed. It cross references
     # two dictionaries: 'device_name/serial_num' and 'serial_num/switchports',
     # serial_num is the key. In its current implmentation, all that really is
     # needed is the serial_num/switcports dict - however, I started on this path
     # and didn't want to redo. The upside, is that if we ever need to reference
     # the device name, we should be good to do.
-    for serial in dev_serial_result.values():
-        if serial in serial_swports_result.keys():
-            lan_attachment_template = {
-                "fabric": VXLAN_FABRIC,
-                "networkName": L2_NETWORK_NAME,
-                "serialNumber": serial,
-                "switchPorts": serial_swports_result[serial],
-                "detachSwitchPorts": "",
-                "vlan": L2_VLAN_ID,
-                "dot1QVlan": 1,
-                "untagged": False,
-                "freeformConfig": "",
-                "deployment": True,
-                "toPorts": "",
-                "extensionValues": "",
-                "instanceValues": ""
-                }
-            vrf_lan_attach_list.append(lan_attachment_template)
+    for serial, switchports in serial_swports_result.items():
+        lan_attachment_template = {
+            "fabric": VXLAN_FABRIC,
+            "networkName": L2_NETWORK_NAME,
+            "serialNumber": serial,
+            "switchPorts": switchports,
+            "detachSwitchPorts": "",
+            "vlan": L2_VLAN_ID,
+            "dot1QVlan": 1,
+            "untagged": False,
+            "freeformConfig": "",
+            "deployment": True,
+            "toPorts": "",
+            "extensionValues": "",
+            "instanceValues": ""
+            }
+        vrf_lan_attach_list.append(lan_attachment_template)
 
     attachlist_vrf_lan_build = [{
         "networkName": L2_NETWORK_NAME,
@@ -474,7 +520,7 @@ def attach_network(token):
 
     payload = json.dumps(attachlist_vrf_lan_build)
 
-    print("\n-> Attaching Network...")
+    print("\n-> Attaching Network.")
     resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, attach_network.__name__)
 
@@ -498,7 +544,7 @@ def deploy_network(token):
 
     payload = json.dumps({"networkNames": L2_NETWORK_NAME})
 
-    print("\n-> Deploying network and interfaces...")
+    print("\n-> Deploying network and interfaces.")
     resp = url_ok(url, headers, payload, request_method="POST")
     check_response_code(resp.status_code, deploy_network.__name__)
 
@@ -507,7 +553,7 @@ def deploy_network(token):
 
 # Recalculate and save the config
 @logging_dec()
-@sleeper_timer_dec(secs=5)
+#@sleeper_timer_dec(secs=5)
 def deploy(token):
     """ Recalculate and save the config """
 
@@ -519,15 +565,18 @@ def deploy(token):
 
     payload = json.dumps({})
 
-    print("-> Deploying config...")
+    print("\n-> Deploying config...")
     resp = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=30)
     check_response_code(resp.status_code, deploy.__name__)
-    time.sleep(10)
+    #time.sleep(10)
+    animation_dot(10)
+    #print("HERE D")
 
     if resp.status_code == 200:
         print("-> Deployment complete.")
     elif resp.status_code != 200:
         raise Exception("ERROR has occurred")
+    #print("HERE DD")
 
 
 # Recalculate and save the config
@@ -543,16 +592,19 @@ def recal_save(token):
 
     payload = json.dumps({})
 
-    print("-> Recalculating and saving config...")
+    print("\n-> Recalculating and saving config...")
     resp = requests.request("POST", url, headers=headers, data=payload, verify=False, timeout=30)
     #check_response_code(resp.status_code, recal_save.__name__)
-    time.sleep(10)
+    #time.sleep(10)
+    animation_dot(10)
 
     if resp.status_code != 200:
         print(f"Error from function: {recal_save.__name__}")
         raise Exception(f"{REDBOLD}ERROR has occurred, check logs.{NOCOLOR}")
 
-    deploy(token)
+    #deploy(token)
+    #print("HERE B")
+
 
 @logging_dec()
 def get_deployment_state(token):
@@ -590,19 +642,22 @@ def checking_state(token):
     count = 2
     while count > 0:
         if count == 1:
-            print("\n-> Somthing isn't right...")
-            print(f"{REDBOLD}-> Please check NDFC. Exiting...{NOCOLOR}")
+            print("\n-> Somthing isn't right.")
+            print(f"{REDBOLD}-> Please check NDFC. Exiting.{NOCOLOR}")
             sys.exit(1)
         elif state not in ("PENDING", "DEPLOYED"):
             count -= 1
             print(f"\n-> Iteration countdown = {count}: {RED}Fabric not in steady state = {state}{NOCOLOR}")
             recal_save(token)
+            deploy(token)
             state = get_deployment_state(token)
-            
             # Troubleshooting, comment out above line and uncomment the following line
             #state = "MOCK ME"
         elif state == "PENDING":
+            #print("HERE A")
             recal_save(token)
+            deploy(token)
+            #print("Here AA")
             count = 0
         elif state == "DEPLOYED":
             print("-> Success: Configuration has been deployed.")

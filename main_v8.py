@@ -1,9 +1,15 @@
 """ This program executes NDFC APIs to configure: VRFs, networks and deployment """
 
+__version__ = "0.8"
+
+# main_v8.py
+#
+# This version, uses data from ./data/dbcontent2.py which has a different dictionary structure.
+#
 # This version has more thorough error checking, (could be better),
-# logging, and references the data in an external module called "data/dbcontent".
+# logging, and references the data in an external module called "data/dbcontent2".
 # In this configuration it would allow you to reference external data sources like a .csv file.
-# Formatting requirements are laid out in the dbcontent.py file.
+# Formatting requirements are laid out in the dbcontent2.py file.
 # Timers are very conservative, it could be tuned to shorten wait time...
 #
 # To view DocStrings run: 'python -m pydoc ./ndfc_build3.py' or 'python -m pydoc -b'
@@ -18,7 +24,7 @@ from functools import wraps
 import requests
 import urllib3
 
-from data import dbcontent
+from data import dbcontent2
 
 urllib3.disable_warnings(category = urllib3.exceptions.InsecureRequestWarning)
 
@@ -137,7 +143,9 @@ def url_ok(uri, head, pay, request_method):
 
 @logging_dec()
 def check_response_code(resp_code, whereami):
-    """ Check response code """
+    """
+    Check response code
+    """
 
     # Troubleshooting
     #print(f"whereami... source = {whereami}; checkpoint = {check_response_code.__name__}")
@@ -165,7 +173,19 @@ def check_validity(resp_text, whereami):
 @logging_dec()
 @sleeper_timer_dec(secs=4)
 def login():
-    """ Login into ND and return a token. """
+    """
+    Login into ND and return a token. Status code returned should be 200
+    >>> url = f"{ND_HOST}/login"
+    >>> headers = {'Content-Type': 'application/json'}
+    >>> payload = json.dumps({
+    ...        "userName": USER,
+    ...        "userPasswd": PASSWORD,
+    ...        "domain": "local"
+    ...        })
+    >>> resp = url_ok(url, headers, payload, request_method="POST")
+    >>> resp.status_code
+    200
+    """
 
     url = f"{ND_HOST}/login"
     headers = {'Content-Type': 'application/json'}
@@ -210,7 +230,9 @@ def check_vrf_network_existance(vrf_net, token):
 @logging_dec()
 @sleeper_timer_dec(secs=8)
 def create_vrf(token):
-    """ Create a new VRF. """
+    """
+    Create a new VRF.
+    """
 
     # Check if vrf exists. If so, exit this function, else continue
     vrf = f"{ROOT_API}{VXLAN_FABRIC}/vrfs/{VRF_NAME}"
@@ -299,14 +321,21 @@ def attach_vrf_new(token):
         'Content-Type': 'application/json'
     }
 
-    # Get device and serial dictionary from data/dbcontent.py
-    dev_serial_result = dbcontent.dev_serial(dbcontent.master_list)
+    # Get serial and switchport dictionary from data/dbcontent2.py
+    serial_switchports_result = dbcontent2.serial_switchports(dbcontent2.master_list)
+
+    #TEST/DEBUGGING
+    #print(f"\n{serial_switchports_result}\n")
+    #for serial in serial_switchports_result:
+    #    print(serial)
+    #print("\nExiting testing...")
+    #sys.exit(1)
 
     lan_attach_list = []
 
-    # This will reference the external master data from: ./data/dbcontent
-    # for the device and serial number, and extract the serial number.
-    for serial in dev_serial_result.values():
+    # This will reference the external master data from: ./data/dbcontent2
+    # and extract the serial number.
+    for serial in serial_switchports_result:
         attachment_template = {
             "fabric": VXLAN_FABRIC,
             "vrfName": VRF_NAME,
@@ -433,39 +462,41 @@ def attach_network(token):
         'Content-Type': 'application/json'
     }
 
-    # Dictionary of device name and serial number
-    dev_serial_result = dbcontent.dev_serial(dbcontent.master_list)
-
     # Dictionary of serial number and switchports
-    serial_swports_result = dbcontent.serial_switchports(dbcontent.master_list)
+    serial_swports_result = dbcontent2.serial_switchports(dbcontent2.master_list)
+
+    #TEST/DEBUGGING
+    # print(f"\n{serial_swports_result}\n")
+    # for serial, switchports in serial_swports_result.items():
+    #     print(serial, switchports)
+    # print("\nExiting testing...")
 
     vrf_lan_attach_list = []
 
-    # This will reference the external master data from: ./data/dbcontent
+    # This will reference the external master data from: ./data/dbcontent2
     # for the serial number and switchports to be deployed. It cross references
     # two dictionaries: 'device_name/serial_num' and 'serial_num/switchports',
     # serial_num is the key. In its current implmentation, all that really is
     # needed is the serial_num/switcports dict - however, I started on this path
     # and didn't want to redo. The upside, is that if we ever need to reference
     # the device name, we should be good to do.
-    for serial in dev_serial_result.values():
-        if serial in serial_swports_result.keys():
-            lan_attachment_template = {
-                "fabric": VXLAN_FABRIC,
-                "networkName": L2_NETWORK_NAME,
-                "serialNumber": serial,
-                "switchPorts": serial_swports_result[serial],
-                "detachSwitchPorts": "",
-                "vlan": L2_VLAN_ID,
-                "dot1QVlan": 1,
-                "untagged": False,
-                "freeformConfig": "",
-                "deployment": True,
-                "toPorts": "",
-                "extensionValues": "",
-                "instanceValues": ""
-                }
-            vrf_lan_attach_list.append(lan_attachment_template)
+    for serial, switchports in serial_swports_result.items():
+        lan_attachment_template = {
+            "fabric": VXLAN_FABRIC,
+            "networkName": L2_NETWORK_NAME,
+            "serialNumber": serial,
+            "switchPorts": switchports,
+            "detachSwitchPorts": "",
+            "vlan": L2_VLAN_ID,
+            "dot1QVlan": 1,
+            "untagged": False,
+            "freeformConfig": "",
+            "deployment": True,
+            "toPorts": "",
+            "extensionValues": "",
+            "instanceValues": ""
+            }
+        vrf_lan_attach_list.append(lan_attachment_template)
 
     attachlist_vrf_lan_build = [{
         "networkName": L2_NETWORK_NAME,
@@ -598,7 +629,6 @@ def checking_state(token):
             print(f"\n-> Iteration countdown = {count}: {RED}Fabric not in steady state = {state}{NOCOLOR}")
             recal_save(token)
             state = get_deployment_state(token)
-            
             # Troubleshooting, comment out above line and uncomment the following line
             #state = "MOCK ME"
         elif state == "PENDING":
