@@ -553,7 +553,7 @@ def deploy_network(token):
 
 # Recalculate and save the config
 @logging_dec()
-#@sleeper_timer_dec(secs=5)
+#@sleeper_timer_dec(secs=10)
 def deploy(token):
     """ Recalculate and save the config """
 
@@ -572,10 +572,10 @@ def deploy(token):
     animation_dot(10)
     #print("HERE D")
 
-    if resp.status_code == 200:
-        print("-> Deployment complete.")
-    elif resp.status_code != 200:
-        raise Exception("ERROR has occurred")
+    # if resp.status_code == 200:
+    #     print("-> Deployment complete.")
+    # elif resp.status_code != 200:
+    #     raise Exception("ERROR has occurred")
     #print("HERE DD")
 
 
